@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Iron Banner – Medieval Mercenary RPG</title>
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/ui.css" />
+  <link rel="stylesheet" href="css/mobile.css" />
+</head>
+<body>
+  <!-- ===== MAIN CANVAS ===== -->
+  <canvas id="worldCanvas"></canvas>
+  <canvas id="combatCanvas" style="display:none;"></canvas>
+
+  <!-- ===== MAIN MENU ===== -->
+  <div id="mainMenu" class="overlay fullscreen">
+    <div class="menu-bg"></div>
+    <div class="menu-content">
+      <div class="game-title">
+        <h1>IRON BANNER</h1>
+        <p class="subtitle">A Mercenary's Chronicle</p>
+      </div>
+      <div class="menu-buttons">
+        <button id="btnNewGame" class="menu-btn primary">New Campaign</button>
+        <button id="btnContinue" class="menu-btn" id="btnContinue">Continue</button>
+        <button id="btnLoadGame" class="menu-btn">Load Game</button>
+      </div>
+      <div class="version">v0.1 – Vertical Slice</div>
+    </div>
+  </div>
+
+  <!-- ===== COMPANY CREATION ===== -->
+  <div id="companyCreation" class="overlay fullscreen" style="display:none;">
+    <div class="creation-panel">
+      <h2>Found Your Company</h2>
+      <div class="creation-form">
+        <div class="form-group">
+          <label>Company Name</label>
+          <input type="text" id="companyNameInput" maxlength="32" placeholder="The Iron Banner" />
+        </div>
+        <div class="form-group">
+          <label>Your Background</label>
+          <div id="backgroundList" class="background-grid"></div>
+        </div>
+        <div id="backgroundDesc" class="background-desc"></div>
+        <div class="form-group">
+          <label>Starting Difficulty</label>
+          <div class="difficulty-row">
+            <button class="diff-btn active" data-diff="easy">Squire</button>
+            <button class="diff-btn" data-diff="normal">Knight</button>
+            <button class="diff-btn" data-diff="hard">Warlord</button>
+          </div>
+        </div>
+      </div>
+      <div class="creation-actions">
+        <button id="btnStartGame" class="menu-btn primary">March!</button>
+        <button id="btnBackToMenu" class="menu-btn">Back</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== OVERWORLD HUD ===== -->
+  <div id="overworldHUD" class="overlay" style="display:none;">
+    <!-- Top bar -->
+    <div class="hud-top">
+      <div class="hud-company">
+        <span id="hudCompanyName">Iron Banner</span>
+        <span id="hudPartySize" class="hud-badge">0/12</span>
+      </div>
+      <div class="hud-resources">
+        <div class="res-item" title="Gold">
+          <span class="res-icon">⚙</span>
+          <span id="hudGold">500</span>
+        </div>
+        <div class="res-item" title="Food">
+          <span class="res-icon">🍖</span>
+          <span id="hudFood">30</span>
+        </div>
+        <div class="res-item" title="Morale">
+          <span class="res-icon">⚔</span>
+          <span id="hudMorale">50</span>
+        </div>
+      </div>
+      <div class="hud-time">
+        <span id="hudDay">Day 1</span>
+        <span id="hudTime">06:00</span>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="hud-bottom">
+      <button class="hud-btn" id="btnRoster" title="Roster">
+        <span class="btn-icon">👥</span><span class="btn-label">Roster</span>
+      </button>
+      <button class="hud-btn" id="btnInventory" title="Inventory">
+        <span class="btn-icon">🎒</span><span class="btn-label">Items</span>
+      </button>
+      <button class="hud-btn" id="btnCamp" title="Camp">
+        <span class="btn-icon">🏕</span><span class="btn-label">Camp</span>
+      </button>
+      <button class="hud-btn" id="btnWorldMap" title="Map">
+        <span class="btn-icon">🗺</span><span class="btn-label">Map</span>
+      </button>
+      <button class="hud-btn" id="btnPause" title="Menu">
+        <span class="btn-icon">☰</span><span class="btn-label">Menu</span>
+      </button>
+    </div>
+
+    <!-- Travel log -->
+    <div class="travel-log" id="travelLog"></div>
+
+    <!-- Mini status bar -->
+    <div class="mini-status" id="miniStatus"></div>
+  </div>
+
+  <!-- ===== ROSTER PANEL ===== -->
+  <div id="rosterPanel" class="overlay side-panel" style="display:none;">
+    <div class="panel-header">
+      <h3>Company Roster</h3>
+      <button class="close-btn" data-close="rosterPanel">✕</button>
+    </div>
+    <div id="rosterList" class="roster-list"></div>
+  </div>
+
+  <!-- ===== CHARACTER SHEET ===== -->
+  <div id="characterSheet" class="overlay side-panel wide" style="display:none;">
+    <div class="panel-header">
+      <h3 id="charSheetName">Character</h3>
+      <button class="close-btn" data-close="characterSheet">✕</button>
+    </div>
+    <div id="charSheetContent" class="char-sheet-content"></div>
+  </div>
+
+  <!-- ===== INVENTORY PANEL ===== -->
+  <div id="inventoryPanel" class="overlay side-panel wide" style="display:none;">
+    <div class="panel-header">
+      <h3>Company Inventory</h3>
+      <button class="close-btn" data-close="inventoryPanel">✕</button>
+    </div>
+    <div id="inventoryContent" class="inventory-content"></div>
+  </div>
+
+  <!-- ===== SETTLEMENT PANEL ===== -->
+  <div id="settlementPanel" class="overlay fullscreen" style="display:none;">
+    <div class="settlement-container">
+      <div class="settlement-header">
+        <h2 id="settlementName">Town</h2>
+        <div class="settlement-tabs">
+          <button class="tab-btn active" data-tab="market">Market</button>
+          <button class="tab-btn" data-tab="tavern">Tavern</button>
+          <button class="tab-btn" data-tab="contracts">Contracts</button>
+          <button class="tab-btn" data-tab="smith">Smith</button>
+        </div>
+        <button class="close-btn" data-close="settlementPanel">Leave Town</button>
+      </div>
+      <div id="settlementContent" class="settlement-content"></div>
+    </div>
+  </div>
+
+  <!-- ===== COMBAT HUD ===== -->
+  <div id="combatHUD" class="overlay" style="display:none;">
+    <!-- Initiative tracker -->
+    <div class="initiative-bar" id="initiativeBar"></div>
+
+    <!-- Character info -->
+    <div class="combat-info" id="combatInfo">
+      <div class="active-char" id="activeCharInfo"></div>
+      <div class="target-char" id="targetCharInfo"></div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="combat-actions" id="combatActions">
+      <button class="action-btn" id="btnAttack" title="Attack">⚔ Attack</button>
+      <button class="action-btn" id="btnMove" title="Move">👣 Move</button>
+      <button class="action-btn" id="btnSkill" title="Special">✨ Skill</button>
+      <button class="action-btn" id="btnWait" title="Wait">⏳ Wait</button>
+      <button class="action-btn danger" id="btnRetreat" title="Retreat">🏃 Retreat</button>
+    </div>
+
+    <!-- Combat log -->
+    <div class="combat-log" id="combatLog"></div>
+
+    <!-- Round info -->
+    <div class="round-info" id="roundInfo">Round 1</div>
+  </div>
+
+  <!-- ===== CAMP PANEL ===== -->
+  <div id="campPanel" class="overlay side-panel" style="display:none;">
+    <div class="panel-header">
+      <h3>Camp</h3>
+      <button class="close-btn" data-close="campPanel">✕</button>
+    </div>
+    <div class="camp-content">
+      <div class="camp-section">
+        <h4>Rest</h4>
+        <p>Rest until dawn, consuming food and recovering wounds.</p>
+        <div class="camp-cost">Cost: <span id="campFoodCost">0</span> food</div>
+        <button class="menu-btn" id="btnRest">Rest (8 hours)</button>
+      </div>
+      <div class="camp-section">
+        <h4>Train</h4>
+        <p>Practice combat with your men (+5 morale, costs 1 day).</p>
+        <button class="menu-btn" id="btnTrain">Train</button>
+      </div>
+      <div class="camp-section">
+        <h4>Forage</h4>
+        <p>Send men to gather food from the land.</p>
+        <button class="menu-btn" id="btnForage">Forage</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAUSE MENU ===== -->
+  <div id="pauseMenu" class="overlay modal" style="display:none;">
+    <div class="modal-content">
+      <h3>Paused</h3>
+      <button class="menu-btn" id="btnResume">Resume</button>
+      <button class="menu-btn" id="btnSaveGame">Save Game</button>
+      <button class="menu-btn" id="btnLoadSlot">Load Game</button>
+      <button class="menu-btn danger" id="btnQuitMain">Quit to Menu</button>
+    </div>
+  </div>
+
+  <!-- ===== LOAD GAME MODAL ===== -->
+  <div id="loadGameModal" class="overlay modal" style="display:none;">
+    <div class="modal-content">
+      <h3>Load Game</h3>
+      <div id="saveSlotList" class="save-slot-list"></div>
+      <button class="menu-btn" id="btnCloseLoad" data-close="loadGameModal">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ===== EVENT MODAL ===== -->
+  <div id="eventModal" class="overlay modal" style="display:none;">
+    <div class="modal-content event-modal">
+      <h3 id="eventTitle">Event</h3>
+      <p id="eventText"></p>
+      <div id="eventChoices" class="event-choices"></div>
+    </div>
+  </div>
+
+  <!-- ===== LOOT MODAL ===== -->
+  <div id="lootModal" class="overlay modal" style="display:none;">
+    <div class="modal-content">
+      <h3>Victory! Spoils of Battle</h3>
+      <div id="lootContent" class="loot-content"></div>
+      <button class="menu-btn primary" id="btnTakeLoot">Take All & Continue</button>
+    </div>
+  </div>
+
+  <!-- ===== COMBAT RESULT ===== -->
+  <div id="combatResult" class="overlay modal" style="display:none;">
+    <div class="modal-content">
+      <h3 id="combatResultTitle">Battle Over</h3>
+      <div id="combatResultContent"></div>
+      <button class="menu-btn primary" id="btnCombatContinue">Continue</button>
+    </div>
+  </div>
+
+  <!-- ===== TOOLTIP ===== -->
+  <div id="tooltip" class="tooltip" style="display:none;"></div>
+
+  <!-- ===== NOTIFICATION ===== -->
+  <div id="notification" class="notification" style="display:none;"></div>
+
+  <!-- Load all JS modules -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
