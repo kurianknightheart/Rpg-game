@@ -1,0 +1,246 @@
+/* ===== MOBILE-FIRST RESPONSIVE OVERRIDES ===== */
+
+/* Small phones (portrait) */
+@media (max-width: 480px) {
+  :root {
+    --panel-width: 100vw;
+    font-size: 13px;
+  }
+
+  .overlay.side-panel {
+    width: 100vw !important;
+    border-left: none;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .overlay.side-panel.wide {
+    width: 100vw !important;
+  }
+
+  /* HUD top - compact on small screens */
+  .hud-top {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .hud-resources {
+    gap: 6px;
+  }
+
+  .res-item {
+    padding: 2px 5px;
+    font-size: 12px;
+  }
+
+  #hudCompanyName {
+    font-size: 13px;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* HUD bottom - smaller icons, no labels on tiny screens */
+  .hud-bottom {
+    gap: 4px;
+    padding: 6px 6px;
+  }
+
+  .hud-btn {
+    min-width: 44px;
+    min-height: 48px;
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+
+  .btn-icon { font-size: 18px; }
+  .btn-label { display: none; }
+
+  /* Background grid - single column */
+  .background-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Attrs grid - 2 columns instead of 3 */
+  .attrs-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Market items stack more compactly */
+  .market-item {
+    flex-wrap: wrap;
+  }
+
+  /* Combat actions - smaller */
+  .action-btn {
+    padding: 8px 8px;
+    font-size: 12px;
+    min-height: 44px;
+    min-width: 56px;
+  }
+
+  /* Modal content full width */
+  .modal-content {
+    width: 96vw;
+    padding: 16px;
+  }
+
+  /* Inventory grid - 2 columns */
+  .inv-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Settlement tabs scroll */
+  .settlement-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Initiative bar scrollable */
+  .initiative-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Travel log narrower */
+  .travel-log {
+    width: 180px;
+  }
+
+  /* Combat log narrower */
+  .combat-log {
+    width: 160px;
+  }
+
+  /* Creation panel */
+  .creation-panel {
+    padding: 16px;
+    width: 100vw;
+    max-width: 100vw;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+}
+
+/* Landscape phones */
+@media (max-height: 500px) and (orientation: landscape) {
+  .hud-top { padding: 4px 8px; }
+  .hud-bottom { padding: 4px 8px; }
+
+  .hud-btn {
+    min-height: 40px;
+    padding: 4px 8px;
+  }
+
+  .btn-label { display: none; }
+
+  /* Travel log overlaps less */
+  .travel-log {
+    max-height: 80px;
+    bottom: 50px;
+  }
+
+  /* Combat actions bar shorter */
+  .combat-actions {
+    bottom: 4px;
+  }
+
+  .action-btn {
+    min-height: 40px;
+    padding: 6px 10px;
+  }
+
+  /* Modal content shorter */
+  .modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Creation panel in landscape */
+  .creation-panel {
+    padding: 12px;
+  }
+}
+
+/* Medium tablets */
+@media (min-width: 481px) and (max-width: 768px) {
+  :root {
+    --panel-width: 340px;
+  }
+
+  .background-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .attrs-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Touch device enhancements */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger tap targets for touch */
+  button, .menu-btn, .hud-btn, .action-btn {
+    min-height: 44px;
+  }
+
+  .roster-item { min-height: 60px; }
+  .market-item { min-height: 48px; }
+  .recruit-card { min-height: 68px; }
+  .contract-item { padding: 12px; }
+
+  /* Remove hover effects that don't work on touch */
+  .roster-item:hover { background: var(--color-surface2); border-color: var(--color-border); }
+
+  /* Scrolling momentum */
+  .roster-list, .char-sheet-content, .inventory-content, .settlement-content, .camp-content {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Large desktop */
+@media (min-width: 1200px) {
+  :root {
+    --panel-width: 420px;
+  }
+
+  .hud-btn {
+    min-width: 70px;
+    font-size: 12px;
+  }
+
+  .btn-icon { font-size: 22px; }
+  .btn-label { display: block; }
+
+  .initiative-bar { padding: 10px 16px; }
+
+  .combat-log { width: 240px; max-height: 140px; }
+  .travel-log { width: 260px; max-height: 140px; }
+}
+
+/* Prevent text selection during gameplay */
+canvas, .hud-btn, .action-btn, .roster-item, .item-card, .market-item {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Smooth scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* iOS safe areas */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .hud-bottom {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .combat-actions {
+    bottom: env(safe-area-inset-bottom);
+  }
+}

@@ -1,309 +1,273 @@
-// Character/stats system
-import { randInt, randRange, pick, chance } from '../utils/rng.js';
-import { uid } from '../utils/helpers.js';
-import BACKGROUNDS, { FIRST_NAMES_MALE, FIRST_NAMES_FEMALE, LAST_NAMES } from '../../data/recruits.js';
-import TRAITS from '../../data/traits.js';
+// Character creation, derived stats, leveling, wounds, and skill gain.
 
-export const BASE_SKILLS = ['swords', 'axes', 'maces', 'spears', 'daggers', 'bows', 'shields', 'medicine', 'survival'];
-export const BASE_ATTRS = ['strength', 'dexterity', 'endurance', 'perception', 'resolve', 'intelligence', 'initiative'];
+import { BACKGROUNDS, FIRST_NAMES_MALE, FIRST_NAMES_FEMALE, LAST_NAMES } from '../../data/recruits.js';
+import { TRAITS } from '../../data/traits.js';
 
-export function createCharacter(backgroundId, options = {}) {
+let _charIdCounter = 0;
+
+function _uid() {
+  _charIdCounter++;
+  return `char_${Date.now()}_${_charIdCounter}`;
+}
+
+function rollRange(range, fn) {
+  const r = fn || Math.random;
+  return Math.floor(r() * (range[1] - range[0] + 1)) + range[0];
+}
+
+/**
+ * Create a full character object from a background template.
+ * @param {string} backgroundId
+ * @param {number} level
+ * @param {function} rng - 0..1 random function (or null for Math.random)
+ */
+export function createCharacter(backgroundId, level = 1, rng = null) {
+  const fn = rng || Math.random;
   const bg = BACKGROUNDS[backgroundId];
   if (!bg) throw new Error(`Unknown background: ${backgroundId}`);
 
   // Generate name
-  const isFemale = chance(30);
-  const names = isFemale ? FIRST_NAMES_FEMALE : FIRST_NAMES_MALE;
-  const firstName = pick(names);
-  const lastName = pick(LAST_NAMES);
-  const name = options.name || `${firstName} ${lastName}`;
+  const useFemale = fn() < 0.2;
+  const firstPool = useFemale ? FIRST_NAMES_FEMALE : FIRST_NAMES_MALE;
+  const firstName = firstPool[Math.floor(fn() * firstPool.length)];
+  const lastName = LAST_NAMES[Math.floor(fn() * LAST_NAMES.length)];
+  const name = `${firstName} ${lastName}`;
 
-  // Generate attributes
-  const attrs = {};
-  for (const attr of BASE_ATTRS) {
-    const range = bg.startStats[attr] || [4, 8];
-    attrs[attr] = randInt(range[0], range[1]);
-  }
+  // Roll attributes
+  const ss = bg.startStats;
+  const attributes = {
+    str: rollRange(ss.strength, fn),
+    dex: rollRange(ss.dexterity, fn),
+    end: rollRange(ss.endurance, fn),
+    per: rollRange(ss.perception, fn),
+    res: rollRange(ss.resolve, fn),
+    ini: rollRange(ss.initiative, fn),
+  };
 
-  // Generate skills
-  const skills = {};
-  for (const skill of BASE_SKILLS) {
-    skills[skill] = 0;
-  }
-  if (bg.startSkills) {
-    for (const [skill, range] of Object.entries(bg.startSkills)) {
-      skills[skill] = randInt(range[0], range[1]);
+  // Roll skills
+  const skills = {
+    swords: 0, axes: 0, maces: 0, spears: 0,
+    bows: 0, crossbows: 0, daggers: 0, throwing: 0,
+    shields: 0, medicine: 0, survival: 0,
+  };
+  for (const [skillName, range] of Object.entries(bg.startSkills || {})) {
+    if (skillName in skills) {
+      skills[skillName] = rollRange(range, fn);
     }
   }
 
-  // Traits
+  // Roll traits
   const traits = [];
-  if (bg.possibleTraits && bg.traitChance && chance(bg.traitChance * 100)) {
-    const traitId = pick(bg.possibleTraits);
-    if (traitId && TRAITS[traitId]) traits.push(traitId);
+  if (bg.possibleTraits && bg.possibleTraits.length > 0 && fn() < bg.traitChance) {
+    const traitId = bg.possibleTraits[Math.floor(fn() * bg.possibleTraits.length)];
+    if (TRAITS[traitId]) traits.push(traitId);
   }
 
-  // Calculate derived stats
   const char = {
-    id: uid('char_'),
+    id: _uid(),
     name,
     background: backgroundId,
     level: 1,
     xp: bg.startXP || 0,
-    xpToNext: 100,
-    attrs,
+    attributes,
     skills,
-    traits,
-    equipment: {
-      mainhand: null, offhand: null, head: null, body: null
-    },
-    inventory: [],
-
-    // Dynamic combat stats (recalculated)
-    maxHp: 0, hp: 0,
-    maxFatigue: 0, fatigue: 0,
-    initiative: 0,
-    meleeSkill: 0, rangedSkill: 0, defense: 0,
-    armor: 0, armorHead: 0,
-
-    // Status
-    alive: true, conscious: true,
-    wounds: [],
-    statusEffects: [],
-
-    // Company stats
-    wage: bg.wage,
+    maxHP: 0,
+    hp: 0,
+    maxStamina: 0,
+    stamina: 0,
     morale: 50,
-    daysSinceJoined: 0,
-
-    // Skill use counters (for advancement)
-    skillUse: {},
-
-    // Start equipment from background
-    startEquipment: bg.startEquipment ? [...bg.startEquipment] : []
+    traits,
+    wounds: [],
+    equipment: { head: null, body: null, mainhand: null, offhand: null },
+    wage: bg.wage || 3,
+    alive: true,
+    _skillXP: Object.fromEntries(Object.keys(skills).map(k => [k, 0])),
   };
 
-  // Initialize skill use counters
-  for (const s of BASE_SKILLS) char.skillUse[s] = 0;
+  // Auto-equip starting gear
+  if (bg.startEquipment) {
+    for (const itemId of bg.startEquipment) {
+      _autoEquip(char, itemId);
+    }
+  }
 
-  recalcStats(char);
-  char.hp = char.maxHp;
-  char.fatigue = 0;
+  calculateDerivedStats(char);
 
+  for (let l = 1; l < level; l++) levelUp(char);
+
+  char.hp = char.maxHP;
+  char.stamina = char.maxStamina;
   return char;
 }
 
-export function recalcStats(char) {
-  const a = char.attrs;
-  const t = getTraitEffects(char.traits);
+const HEAD_ITEMS = ['leather_cap', 'padded_cap', 'kettle_hat', 'nasal_helmet', 'closed_helmet', 'greathelm'];
+const BODY_ITEMS = ['linen_shirt', 'leather_armor', 'padded_armor', 'mail_hauberk', 'brigandine', 'plate_armor'];
+const OFFHAND_ITEMS = ['wooden_shield', 'iron_shield', 'kite_shield'];
 
-  // Max HP: base 30 + endurance * 5 + strength * 2
-  char.maxHp = 30 + (a.endurance + (t.endBonus || 0)) * 5 +
-               (a.strength + (t.strBonus || 0)) * 2 +
-               (t.hpBonus || 0);
-
-  // Max fatigue
-  char.maxFatigue = 60 + (a.endurance + (t.endBonus || 0)) * 3 + (a.strength + (t.strBonus || 0)) * 2;
-
-  // Initiative: base from initiative attr + dex
-  char.initiative = (a.initiative + (t.initiativeBonus || 0)) + Math.floor(a.dexterity / 2);
-
-  // Melee hit chance: dex * 3 + relevant weapon skill (computed per weapon)
-  char.meleeSkill = Math.floor((a.dexterity + (t.dexBonus || 0)) * 3 + (t.meleeBonus || 0));
-
-  // Ranged hit chance
-  char.rangedSkill = Math.floor((a.perception + (t.perBonus || 0)) * 3 + (t.rangedBonus || 0));
-
-  // Defense: dex + shield (computed per shield)
-  char.defense = Math.floor((a.dexterity + (t.dexBonus || 0)) * 2 + (t.defBonus || 0));
-
-  // Armor from equipment
-  char.armor = 0;
-  char.armorHead = 0;
-
-  if (char.equipment.body) {
-    const item = getEquippedItem(char.equipment.body);
-    if (item) {
-      char.armor = item.armor || 0;
-    }
-  }
-  if (char.equipment.head) {
-    const item = getEquippedItem(char.equipment.head);
-    if (item) {
-      char.armorHead = item.armor || 0;
-    }
-  }
-
-  // Block chance from shield
-  char.blockChance = 0;
-  if (char.equipment.offhand) {
-    const item = getEquippedItem(char.equipment.offhand);
-    if (item && item.type === 'shield') {
-      char.blockChance = item.blockChance + (char.skills.shields || 0) * 0.3 + (t.blockBonus || 0);
-    }
-  }
-
-  // Apply wound penalties
-  for (const wound of (char.wounds || [])) {
-    if (wound === 'injured_leg') char.initiative -= 10;
-    if (wound === 'injured_arm') { char.meleeSkill -= 5; char.rangedSkill -= 5; }
+function _autoEquip(char, itemId) {
+  if (HEAD_ITEMS.includes(itemId)) {
+    char.equipment.head = itemId;
+  } else if (BODY_ITEMS.includes(itemId)) {
+    char.equipment.body = itemId;
+  } else if (OFFHAND_ITEMS.includes(itemId)) {
+    char.equipment.offhand = itemId;
+  } else {
+    char.equipment.mainhand = itemId;
   }
 }
 
-function getEquippedItem(itemId) {
-  if (!itemId) return null;
-  // Import lazily to avoid circular
-  try {
-    // Access global item registry
-    return window._ITEMS ? window._ITEMS[itemId] : null;
-  } catch { return null; }
-}
+/**
+ * Compute maxHP, maxStamina, initiative, etc. from attributes and traits.
+ * Updates char in place.
+ */
+export function calculateDerivedStats(char) {
+  const a = char.attributes;
 
-export function getTraitEffects(traitIds) {
-  const effects = {};
-  for (const tid of (traitIds || [])) {
-    const trait = TRAITS[tid];
-    if (!trait || !trait.effects) continue;
-    for (const [key, val] of Object.entries(trait.effects)) {
-      effects[key] = (effects[key] || 0) + val;
-    }
+  let hpBonus = 0;
+  let endBonus = 0;
+  let iniBonus = 0;
+
+  for (const traitId of char.traits || []) {
+    const trait = TRAITS[traitId];
+    if (!trait) continue;
+    hpBonus += trait.effects.hpBonus || 0;
+    endBonus += trait.effects.endBonus || 0;
+    iniBonus += trait.effects.initiativeBonus || 0;
   }
-  return effects;
+
+  const effectiveEnd = a.end + endBonus;
+  char.maxHP = Math.max(20, 80 + effectiveEnd * 2 + hpBonus);
+  char.maxStamina = Math.max(10, 50 + effectiveEnd);
+
+  if (char.hp > char.maxHP) char.hp = char.maxHP;
+  if (char.stamina > char.maxStamina) char.stamina = char.maxStamina;
+
+  char.initiative = a.ini * 3 + Math.floor(a.dex / 2) + iniBonus;
+
+  // Wage with trait modifiers
+  let wageMult = 1.0;
+  for (const traitId of char.traits || []) {
+    const trait = TRAITS[traitId];
+    if (trait) wageMult *= (trait.effects.wageMultiplier || 1.0);
+  }
+  const bg = BACKGROUNDS[char.background];
+  char.wage = Math.ceil((bg ? bg.wage : 3) * wageMult);
 }
 
-export function getWeaponSkill(char, weapon) {
-  if (!weapon) return char.meleeSkill;
-  const skillName = weapon.attackSkill;
-  return char.meleeSkill + (char.skills[skillName] || 0);
+/**
+ * Add XP to a skill with diminishing returns.
+ * actual gain = amount * (1 - currentSkill/150), caps at 100.
+ */
+export function gainSkillXP(char, skill, amount) {
+  if (!(skill in char.skills)) return;
+  const current = char.skills[skill];
+  if (current >= 100) return;
+
+  const effective = amount * (1 - current / 150);
+  char._skillXP = char._skillXP || {};
+  char._skillXP[skill] = (char._skillXP[skill] || 0) + effective;
+
+  while (char._skillXP[skill] >= 1) {
+    char._skillXP[skill] -= 1;
+    char.skills[skill] = Math.min(100, char.skills[skill] + 1);
+  }
 }
 
+/**
+ * Add character XP, check level-up threshold: 100 * level^1.5
+ */
 export function gainXP(char, amount) {
-  const t = getTraitEffects(char.traits);
-  const multiplier = t.xpMultiplier || 1;
-  char.xp += Math.floor(amount * multiplier);
-
-  const events = [];
-  while (char.xp >= char.xpToNext) {
-    char.xp -= char.xpToNext;
-    levelUp(char);
-    events.push({ type: 'levelup', char });
-    char.xpToNext = Math.floor(char.xpToNext * 1.3);
+  let mult = 1.0;
+  for (const traitId of char.traits || []) {
+    const trait = TRAITS[traitId];
+    if (trait && trait.effects.xpMultiplier) mult *= trait.effects.xpMultiplier;
   }
-  return events;
+  char.xp += Math.round(amount * mult);
+
+  const threshold = Math.round(100 * Math.pow(char.level, 1.5));
+  if (char.xp >= threshold) {
+    char.xp -= threshold;
+    levelUp(char);
+    return true; // leveled up
+  }
+  return false;
 }
 
+/**
+ * Level up: +1 level, +1 to two random attributes, recalculate derived stats.
+ */
 export function levelUp(char) {
   char.level++;
-
-  // Increase random attributes
-  const attrCount = 2 + Math.floor(char.attrs.intelligence / 10);
-  const attrs = [...BASE_ATTRS];
-  for (let i = 0; i < attrCount; i++) {
-    const attr = pick(attrs);
-    char.attrs[attr] = Math.min(20, char.attrs[attr] + 1);
-  }
-
-  // Increase a skill based on usage
-  const topSkills = BASE_SKILLS
-    .map(s => ({ s, use: char.skillUse[s] || 0 }))
-    .sort((a, b) => b.use - a.use)
-    .slice(0, 3);
-  if (topSkills.length > 0) {
-    const skill = pick(topSkills).s;
-    char.skills[skill] = Math.min(100, char.skills[skill] + randInt(3, 8));
-    char.skillUse[skill] = 0;
-  }
-
-  // Chance to gain a trait
-  if (char.traits.length < 4 && chance(15)) {
-    const traitPool = Object.keys(TRAITS).filter(t =>
-      TRAITS[t].type !== 'injury' && !char.traits.includes(t)
-    );
-    const newTrait = pick(traitPool);
-    if (newTrait) char.traits.push(newTrait);
-  }
-
-  recalcStats(char);
-  char.hp = Math.min(char.hp + 10, char.maxHp);
+  const attrs = ['str', 'dex', 'end', 'per', 'res', 'ini'];
+  const idx1 = Math.floor(Math.random() * attrs.length);
+  let idx2 = Math.floor(Math.random() * attrs.length);
+  if (idx2 === idx1) idx2 = (idx2 + 1) % attrs.length;
+  char.attributes[attrs[idx1]]++;
+  char.attributes[attrs[idx2]]++;
+  calculateDerivedStats(char);
+  char.hp = Math.min(char.maxHP, char.hp + 10);
 }
 
-export function useSkill(char, skillName, amount = 1) {
-  if (char.skillUse[skillName] !== undefined) {
-    char.skillUse[skillName] += amount;
+/**
+ * Get effective skill modified by traits and wounds.
+ */
+export function getEffectiveSkill(char, skill) {
+  let value = char.skills[skill] || 0;
+
+  for (const traitId of char.traits || []) {
+    const trait = TRAITS[traitId];
+    if (!trait) continue;
+    const meleeSkills = ['swords', 'axes', 'maces', 'spears', 'daggers', 'throwing'];
+    const rangedSkills = ['bows', 'crossbows'];
+    if (meleeSkills.includes(skill)) value += (trait.effects.meleeBonus || 0);
+    if (rangedSkills.includes(skill)) value += (trait.effects.rangedBonus || 0);
+    if (skill !== 'shields' && skill !== 'medicine' && skill !== 'survival') {
+      value += (trait.effects.hitBonus || 0);
+    }
+  }
+
+  for (const woundId of char.wounds || []) {
+    if (woundId === 'injured_arm') value -= 10;
+  }
+
+  return Math.max(0, value);
+}
+
+/**
+ * Return the relevant skill key for a weapon data object.
+ */
+export function getWeaponSkill(char, weapon) {
+  if (!weapon) return 'swords';
+  const typeMap = {
+    sword: 'swords', axe: 'axes', mace: 'maces',
+    spear: 'spears', bow: 'bows', crossbow: 'crossbows',
+    dagger: 'daggers', throwing: 'throwing',
+  };
+  return typeMap[weapon.type] || 'swords';
+}
+
+/** Add wound by ID (no duplicates). */
+export function applyWound(char, woundId) {
+  if (!char.wounds.includes(woundId)) {
+    char.wounds.push(woundId);
+    if (woundId === 'injured_leg') char.initiative = Math.max(0, char.initiative - 10);
+    if (woundId === 'injured_arm') {} // handled in getEffectiveSkill
   }
 }
 
-export function addWound(char, woundType) {
-  if (!char.wounds) char.wounds = [];
-  if (!char.wounds.includes(woundType)) {
-    char.wounds.push(woundType);
-    if (!char.traits.includes(woundType)) char.traits.push(woundType);
-    recalcStats(char);
-  }
+/** Remove wound by ID. */
+export function healWound(char, woundId) {
+  char.wounds = char.wounds.filter(w => w !== woundId);
+  calculateDerivedStats(char);
 }
 
-export function healWounds(char) {
-  if (!char.wounds) return;
-  char.wounds = [];
-  char.traits = char.traits.filter(t =>
-    !TRAITS[t] || TRAITS[t].type !== 'injury'
-  );
-  recalcStats(char);
-}
-
+/** Returns true if the character is alive and has HP. */
 export function isAlive(char) {
   return char.alive && char.hp > 0;
 }
 
-export function getCharSummary(char) {
-  return {
-    name: char.name,
-    level: char.level,
-    background: char.background,
-    hp: char.hp,
-    maxHp: char.maxHp,
-    alive: char.alive
-  };
+/** Return the daily wage for a background. */
+export function getWageForBackground(backgroundId) {
+  const bg = BACKGROUNDS[backgroundId];
+  return bg ? bg.wage : 3;
 }
-
-// Combat stats
-export function getMeleeHitChance(attacker, defender, weapon) {
-  const atkSkill = getWeaponSkill(attacker, weapon) + (weapon ? (attacker.skills[weapon.attackSkill] || 0) : 0);
-  const defSkill = defender.defense;
-  const chance = 50 + atkSkill - defSkill;
-  return Math.max(5, Math.min(95, chance));
-}
-
-export function getRangedHitChance(attacker, defender, weapon, rangePenalty = 0) {
-  const atkSkill = attacker.rangedSkill + (weapon ? (attacker.skills[weapon.attackSkill] || 0) : 0);
-  const defSkill = defender.defense / 2;
-  const chance = 50 + atkSkill - defSkill - rangePenalty;
-  return Math.max(5, Math.min(95, chance));
-}
-
-export function calcDamage(attacker, weapon) {
-  const t = getTraitEffects(attacker.traits);
-  const strBonus = Math.floor(attacker.attrs.strength / 3);
-  const dmgBonus = (t.meleeDamageBonus || 0);
-
-  if (!weapon) {
-    // Unarmed
-    return Math.max(1, randInt(1, 5) + strBonus);
-  }
-
-  const [minDmg, maxDmg] = weapon.damage;
-  return Math.max(1, randInt(minDmg, maxDmg) + strBonus + dmgBonus);
-}
-
-export function calcArmorReduction(damage, armorValue, armorPen = 0) {
-  const effectiveArmor = Math.max(0, armorValue - armorPen);
-  const reduction = Math.min(damage * 0.85, effectiveArmor * 0.6);
-  return Math.max(1, Math.floor(damage - reduction));
-}
-
-export default {
-  createCharacter, recalcStats, gainXP, levelUp,
-  useSkill, addWound, healWounds, isAlive,
-  getMeleeHitChance, getRangedHitChance, calcDamage, calcArmorReduction,
-  getWeaponSkill, getTraitEffects, getCharSummary
-};

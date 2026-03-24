@@ -1,336 +1,411 @@
-// Canvas 2D rendering engine
+// WorldRenderer - draws the isometric world map and the tactical combat grid.
 
-export class Renderer {
-  constructor(canvas) {
-    this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
-    this.width = canvas.width;
-    this.height = canvas.height;
-    this.tileW = 64;
-    this.tileH = 32;
-    this._spriteCache = {};
+const TILE_W = 64;
+const TILE_H = 32;
+
+// World tile colors by type index
+const TILE_COLORS = {
+  0: '#3a5a2a', // plains
+  1: '#1a3a1a', // forest
+  2: '#5a4a2a', // hills
+  3: '#4a4a4a', // mountains
+  4: '#2a3a1a', // swamp
+  5: '#c0c8d0', // snow
+  6: '#6a5a3a', // road
+  7: '#1a2a5a', // water
+  8: '#8B7355', // settlement
+};
+
+// Lighter edge color per tile type for subtle shading
+const TILE_EDGE_COLORS = {
+  0: '#4a7a3a',
+  1: '#254025',
+  2: '#7a6040',
+  3: '#5a5a5a',
+  4: '#3a4a2a',
+  5: '#d8e0e8',
+  6: '#8a7050',
+  7: '#2a3a7a',
+  8: '#a0896a',
+};
+
+// Combat tile colors
+const COMBAT_TILE_COLORS = {
+  0: '#3a5a2a', // grass
+  1: '#1a3a1a', // trees
+  2: '#4a4a4a', // rocks
+  3: '#3a2a1a', // mud
+};
+
+/**
+ * Convert tile grid coordinates to isometric screen coordinates.
+ */
+function tileToIso(col, row, offsetX, offsetY) {
+  return {
+    x: (col - row) * (TILE_W / 2) + offsetX,
+    y: (col + row) * (TILE_H / 2) + offsetY,
+  };
+}
+
+function drawDiamond(ctx, x, y, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(x, y - h / 2);
+  ctx.lineTo(x + w / 2, y);
+  ctx.lineTo(x, y + h / 2);
+  ctx.lineTo(x - w / 2, y);
+  ctx.closePath();
+}
+
+export class WorldRenderer {
+  constructor() {
+    this.tileW = TILE_W;
+    this.tileH = TILE_H;
   }
 
-  resize(w, h) {
-    this.canvas.width = w;
-    this.canvas.height = h;
-    this.width = w;
-    this.height = h;
+  _defaultOffset(canvas) {
+    return {
+      offsetX: canvas.width / 2,
+      offsetY: TILE_H * 2,
+    };
   }
 
-  clear(color = '#1a1a2e') {
-    this.ctx.fillStyle = color;
-    this.ctx.fillRect(0, 0, this.width, this.height);
-  }
+  /**
+   * Draw the full isometric world map.
+   */
+  drawWorld(ctx, worldTiles, worldW, worldH, settlements, enemyParties, partyPos, camera, state) {
+    const canvas = ctx.canvas;
+    const { offsetX, offsetY } = this._defaultOffset(canvas);
 
-  // Draw isometric tile
-  drawTile(x, y, fillColor, strokeColor = null, alpha = 1) {
-    const ctx = this.ctx;
-    const hw = this.tileW / 2;
-    const hh = this.tileH / 2;
+    camera.apply(ctx);
 
-    ctx.globalAlpha = alpha;
-    ctx.beginPath();
-    ctx.moveTo(x, y - hh);
-    ctx.lineTo(x + hw, y);
-    ctx.lineTo(x, y + hh);
-    ctx.lineTo(x - hw, y);
-    ctx.closePath();
-    ctx.fillStyle = fillColor;
-    ctx.fill();
-    if (strokeColor) {
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
+    const hour = state ? (state.hour || 6) : 6;
+    const nightAlpha = this._nightAlpha(hour);
+
+    // Viewport culling bounds in world space
+    const margin = TILE_W * 2;
+    const topLeft = camera.screenToWorld(-margin, -margin);
+    const bottomRight = camera.screenToWorld(canvas.width + margin, canvas.height + margin);
+
+    // Draw tiles row by row (painter's order)
+    for (let row = 0; row < worldH; row++) {
+      for (let col = 0; col < worldW; col++) {
+        const { x, y } = tileToIso(col, row, offsetX, offsetY);
+
+        // Viewport culling
+        if (x + TILE_W / 2 < topLeft.x || x - TILE_W / 2 > bottomRight.x) continue;
+        if (y + TILE_H / 2 < topLeft.y || y - TILE_H / 2 > bottomRight.y) continue;
+
+        const tile = worldTiles[row] && worldTiles[row][col];
+        if (!tile) continue;
+
+        const isExplored = tile.explored;
+        const tileType = tile.type;
+
+        let baseColor = TILE_COLORS[tileType] !== undefined ? TILE_COLORS[tileType] : TILE_COLORS[0];
+        let edgeColor = TILE_EDGE_COLORS[tileType] !== undefined ? TILE_EDGE_COLORS[tileType] : TILE_EDGE_COLORS[0];
+
+        if (!isExplored) {
+          baseColor = '#111111';
+          edgeColor = '#1a1a1a';
+        }
+
+        drawDiamond(ctx, x, y, TILE_W, TILE_H);
+        ctx.fillStyle = baseColor;
+        ctx.fill();
+        ctx.strokeStyle = edgeColor;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
     }
-    ctx.globalAlpha = 1;
-  }
 
-  // Draw isometric tile with sides (3D box look)
-  drawIsoTile(x, y, fillColor, depth = 8, highlight = false) {
-    const ctx = this.ctx;
-    const hw = this.tileW / 2;
-    const hh = this.tileH / 2;
-
-    // Top face
-    ctx.beginPath();
-    ctx.moveTo(x, y - hh);
-    ctx.lineTo(x + hw, y);
-    ctx.lineTo(x, y + hh);
-    ctx.lineTo(x - hw, y);
-    ctx.closePath();
-
-    if (highlight) {
-      ctx.fillStyle = lightenColor(fillColor, 30);
-    } else {
-      ctx.fillStyle = fillColor;
+    // Draw move path highlight
+    if (state && state.world && state.world.movePath) {
+      for (const step of state.world.movePath) {
+        const { x, y } = tileToIso(step.col, step.row, offsetX, offsetY);
+        drawDiamond(ctx, x, y, TILE_W, TILE_H);
+        ctx.fillStyle = 'rgba(255, 255, 100, 0.15)';
+        ctx.fill();
+      }
     }
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
 
-    if (depth > 0) {
-      // Left side
-      ctx.beginPath();
-      ctx.moveTo(x - hw, y);
-      ctx.lineTo(x, y + hh);
-      ctx.lineTo(x, y + hh + depth);
-      ctx.lineTo(x - hw, y + depth);
-      ctx.closePath();
-      ctx.fillStyle = darkenColor(fillColor, 35);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-      ctx.stroke();
-
-      // Right side
-      ctx.beginPath();
-      ctx.moveTo(x, y + hh);
-      ctx.lineTo(x + hw, y);
-      ctx.lineTo(x + hw, y + depth);
-      ctx.lineTo(x, y + hh + depth);
-      ctx.closePath();
-      ctx.fillStyle = darkenColor(fillColor, 20);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-      ctx.stroke();
-    }
-  }
-
-  // Draw a unit/character sprite on tile
-  drawUnit(x, y, color, letter, isEnemy = false, hp = 1, maxHp = 1, selected = false) {
-    const ctx = this.ctx;
-    const r = 10;
-
-    // Selection ring
-    if (selected) {
-      ctx.beginPath();
-      ctx.arc(x, y - 8, r + 4, 0, Math.PI * 2);
-      ctx.strokeStyle = '#FFD700';
+    // Draw move target highlight
+    if (state && state.world && state.world.moveTarget) {
+      const mt = state.world.moveTarget;
+      const { x, y } = tileToIso(mt.col, mt.row, offsetX, offsetY);
+      drawDiamond(ctx, x, y, TILE_W, TILE_H);
+      ctx.strokeStyle = 'rgba(255, 255, 100, 0.9)';
       ctx.lineWidth = 2;
       ctx.stroke();
     }
 
+    // Draw settlements
+    if (settlements) {
+      for (const s of settlements) {
+        if (!s) continue;
+        const tile = worldTiles[s.row] && worldTiles[s.row][s.col];
+        if (!tile || !tile.explored) continue;
+        const { x, y } = tileToIso(s.col, s.row, offsetX, offsetY);
+        this._drawSettlement(ctx, x, y, s);
+      }
+    }
+
+    // Draw enemy parties
+    if (enemyParties) {
+      for (const ep of enemyParties) {
+        if (!ep || !ep.alive) continue;
+        const tile = worldTiles[ep.row] && worldTiles[ep.row][ep.col];
+        if (!tile || !tile.explored) continue;
+        const { x, y } = tileToIso(ep.col, ep.row, offsetX, offsetY);
+        this._drawEnemyParty(ctx, x, y, ep);
+      }
+    }
+
+    // Draw player party
+    if (partyPos) {
+      const { x, y } = tileToIso(partyPos.col, partyPos.row, offsetX, offsetY);
+      this._drawParty(ctx, x, y, state);
+    }
+
+    camera.restore(ctx);
+
+    // Day/night overlay in screen space
+    if (nightAlpha > 0) {
+      ctx.fillStyle = `rgba(0, 0, 40, ${nightAlpha})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+
+  _nightAlpha(hour) {
+    if (hour >= 6 && hour < 20) return 0;
+    let t;
+    if (hour >= 20) {
+      t = (hour - 20) / 4;
+    } else {
+      t = 1 - hour / 6;
+    }
+    return Math.min(0.65, t * 0.65);
+  }
+
+  _drawSettlement(ctx, x, y, settlement) {
+    const size = settlement.type === 'city' ? 10 : settlement.type === 'town' ? 8 : 6;
+    const color = settlement.type === 'city' ? '#d4af37' : settlement.type === 'town' ? '#c4a028' : '#b49018';
+
+    // House body
+    ctx.fillStyle = color;
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth = 1;
+
+    ctx.beginPath();
+    ctx.rect(x - size, y - size / 2, size * 2, size);
+    ctx.fill();
+    ctx.stroke();
+
+    // Roof triangle
+    ctx.beginPath();
+    ctx.moveTo(x - size - 2, y - size / 2);
+    ctx.lineTo(x, y - size - 6);
+    ctx.lineTo(x + size + 2, y - size / 2);
+    ctx.closePath();
+    ctx.fillStyle = this._darken(color);
+    ctx.fill();
+    ctx.stroke();
+
+    // Settlement name
+    ctx.font = `bold ${size}px sans-serif`;
+    ctx.fillStyle = '#ffffcc';
+    ctx.textAlign = 'center';
+    ctx.fillText(settlement.name, x, y + size + 10);
+  }
+
+  _drawEnemyParty(ctx, x, y, party) {
+    const r = 8;
+    ctx.beginPath();
+    ctx.moveTo(x, y - r * 1.5);
+    ctx.lineTo(x + r, y - r * 0.5);
+    ctx.lineTo(x, y + r * 0.5);
+    ctx.lineTo(x - r, y - r * 0.5);
+    ctx.closePath();
+    ctx.fillStyle = '#cc2222';
+    ctx.fill();
+    ctx.strokeStyle = '#ff7777';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('!', x, y - r * 0.5);
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  _drawParty(ctx, x, y, state) {
+    const r = 10;
+
     // Shadow
     ctx.beginPath();
-    ctx.ellipse(x, y + 2, r, r * 0.4, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.ellipse(x, y + 2, r * 0.9, r * 0.4, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fill();
+
+    // Circle body
+    ctx.beginPath();
+    ctx.arc(x, y - r, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a6aff';
+    ctx.fill();
+    ctx.strokeStyle = '#88aaff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Banner letter
+    const letter = (state && state.company && state.company.name)
+      ? state.company.name.charAt(0).toUpperCase()
+      : 'I';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(letter, x, y - r);
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  _darken(hex) {
+    // Darken a hex color by 30%
+    const n = parseInt(hex.replace('#', ''), 16);
+    const r = Math.max(0, ((n >> 16) & 0xff) - 50);
+    const g = Math.max(0, ((n >> 8) & 0xff) - 50);
+    const b = Math.max(0, (n & 0xff) - 50);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  // -------------------------------------------------------------------------
+  // Combat renderer
+  // -------------------------------------------------------------------------
+
+  drawCombat(ctx, combatTiles, combatW, combatH, units, selectedUnit, highlightedTiles, camera) {
+    const cTW = 48;
+    const cTH = 24;
+    const canvas = ctx.canvas;
+    const offsetX = canvas.width / 2;
+    const offsetY = cTH * 3;
+
+    camera.apply(ctx);
+
+    for (let row = 0; row < combatH; row++) {
+      for (let col = 0; col < combatW; col++) {
+        const x = (col - row) * (cTW / 2) + offsetX;
+        const y = (col + row) * (cTH / 2) + offsetY;
+
+        const tile = combatTiles[row] && combatTiles[row][col];
+        const tileType = tile ? tile.type : 0;
+        let color = COMBAT_TILE_COLORS[tileType] !== undefined ? COMBAT_TILE_COLORS[tileType] : COMBAT_TILE_COLORS[0];
+
+        // Find highlight
+        let highlight = null;
+        if (highlightedTiles) {
+          for (const ht of highlightedTiles) {
+            if (ht.col === col && ht.row === row) {
+              highlight = ht.type;
+              break;
+            }
+          }
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(x, y - cTH / 2);
+        ctx.lineTo(x + cTW / 2, y);
+        ctx.lineTo(x, y + cTH / 2);
+        ctx.lineTo(x - cTW / 2, y);
+        ctx.closePath();
+
+        if (highlight === 'move') {
+          ctx.fillStyle = 'rgba(50, 100, 255, 0.6)';
+        } else if (highlight === 'attack') {
+          ctx.fillStyle = 'rgba(255, 40, 40, 0.6)';
+        } else {
+          ctx.fillStyle = color;
+        }
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+
+    // Draw units in painter's order
+    if (units) {
+      const sorted = [...units].sort((a, b) => (a.row + a.col) - (b.row + b.col));
+      for (const unit of sorted) {
+        if (unit.hp <= 0) continue;
+        const x = (unit.col - unit.row) * (cTW / 2) + offsetX;
+        const y = (unit.col + unit.row) * (cTH / 2) + offsetY;
+        this._drawCombatUnit(ctx, x, y, unit, selectedUnit, cTW, cTH);
+      }
+    }
+
+    camera.restore(ctx);
+  }
+
+  _drawCombatUnit(ctx, x, y, unit, selectedUnit, cTW, cTH) {
+    const r = Math.min(cTW, cTH) * 0.38;
+    const isSelected = selectedUnit && selectedUnit.id === unit.id;
+    const uy = y - r * 0.5;
+
+    // Shadow
+    ctx.beginPath();
+    ctx.ellipse(x, y + r * 0.3, r * 0.8, r * 0.3, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fill();
 
     // Body circle
     ctx.beginPath();
-    ctx.arc(x, y - 8, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
+    ctx.arc(x, uy, r, 0, Math.PI * 2);
+    ctx.fillStyle = unit.isPlayer ? '#d4a020' : '#cc2020';
     ctx.fill();
-    ctx.strokeStyle = isEnemy ? '#ff4444' : '#ffffff';
-    ctx.lineWidth = 1.5;
+
+    if (isSelected) {
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+    } else {
+      ctx.strokeStyle = unit.isPlayer ? '#f0c040' : '#ff5555';
+      ctx.lineWidth = 1.5;
+    }
     ctx.stroke();
 
-    // Letter
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px serif';
+    // Name letter
+    ctx.font = `bold ${Math.max(8, Math.round(r))}px sans-serif`;
+    ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(letter, x, y - 8);
+    ctx.fillText(unit.name.charAt(0).toUpperCase(), x, uy);
+    ctx.textBaseline = 'alphabetic';
 
     // HP bar
-    if (maxHp > 0) {
-      const barW = 20;
-      const barH = 3;
-      const bx = x - barW / 2;
-      const by = y + 4;
-      ctx.fillStyle = '#333';
-      ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
-      ctx.fillStyle = hp / maxHp > 0.5 ? '#44ff44' :
-                      hp / maxHp > 0.25 ? '#ffaa00' : '#ff4444';
-      ctx.fillRect(bx, by, Math.max(0, barW * (hp / maxHp)), barH);
-    }
-  }
-
-  // Draw a settlement icon
-  drawSettlement(x, y, type, name, hovered = false) {
-    const ctx = this.ctx;
-    const sizes = { village: 14, town: 18, city: 22, fort: 16 };
-    const colors = { village: '#8B7355', town: '#6B5B45', city: '#c0a060', fort: '#888' };
-    const r = sizes[type] || 14;
-    const color = colors[type] || '#8B7355';
-
-    // Glow on hover
-    if (hovered) {
-      ctx.beginPath();
-      ctx.arc(x, y - r, r + 6, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
-      ctx.fill();
-    }
-
-    // Building shape
-    ctx.fillStyle = color;
-    ctx.strokeStyle = '#ffcc88';
-    ctx.lineWidth = 1.5;
-
-    if (type === 'city') {
-      // Castle/city shape
-      ctx.beginPath();
-      ctx.rect(x - r, y - r * 1.5, r * 2, r * 1.5);
-      ctx.fill(); ctx.stroke();
-      // Battlements
-      for (let i = 0; i < 3; i++) {
-        ctx.fillRect(x - r + i * (r * 0.7), y - r * 1.5 - 5, r * 0.5, 5);
-      }
-    } else if (type === 'town') {
-      ctx.beginPath();
-      ctx.rect(x - r * 0.8, y - r, r * 1.6, r);
-      ctx.fill(); ctx.stroke();
-      // Tower
-      ctx.beginPath();
-      ctx.moveTo(x - r * 0.4, y - r);
-      ctx.lineTo(x, y - r * 1.8);
-      ctx.lineTo(x + r * 0.4, y - r);
-      ctx.fill(); ctx.stroke();
-    } else if (type === 'fort') {
-      ctx.beginPath();
-      ctx.rect(x - r, y - r, r * 2, r);
-      ctx.fill(); ctx.stroke();
-      ctx.fillRect(x - r - 4, y - r * 1.2, 8, r * 1.2);
-      ctx.fillRect(x + r - 4, y - r * 1.2, 8, r * 1.2);
-    } else {
-      // Village - cluster of small houses
-      ctx.beginPath();
-      ctx.rect(x - r * 0.6, y - r * 0.8, r * 1.2, r * 0.8);
-      ctx.fill(); ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(x - r * 0.6, y - r * 0.8);
-      ctx.lineTo(x, y - r * 1.4);
-      ctx.lineTo(x + r * 0.6, y - r * 0.8);
-      ctx.fill(); ctx.stroke();
-    }
-
-    // Name label
-    ctx.fillStyle = '#fff';
-    ctx.font = hovered ? 'bold 11px sans-serif' : '10px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.shadowColor = '#000';
-    ctx.shadowBlur = 3;
-    ctx.fillText(name, x, y + 4);
-    ctx.shadowBlur = 0;
-  }
-
-  // Draw party sprite
-  drawParty(x, y, color = '#4488ff', size = 5) {
-    const ctx = this.ctx;
-
-    // Shadow
-    ctx.beginPath();
-    ctx.ellipse(x, y + 4, size + 2, (size + 2) * 0.4, 0, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fill();
-
-    // Flag/banner
-    ctx.fillStyle = color;
-    ctx.fillRect(x - 1, y - size * 3, 2, size * 3);
-    ctx.beginPath();
-    ctx.moveTo(x + 1, y - size * 3);
-    ctx.lineTo(x + size + 3, y - size * 2);
-    ctx.lineTo(x + 1, y - size);
-    ctx.fillStyle = '#FFD700';
-    ctx.fill();
-
-    // Body
-    ctx.beginPath();
-    ctx.arc(x, y - size, size, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Helmet
-    ctx.beginPath();
-    ctx.arc(x, y - size - 3, size * 0.7, Math.PI, Math.PI * 2);
-    ctx.fillStyle = '#888';
-    ctx.fill();
-  }
-
-  // Draw enemy party on overworld
-  drawEnemyParty(x, y, color = '#ff4444') {
-    const ctx = this.ctx;
-    // Skull-like icon
-    ctx.beginPath();
-    ctx.arc(x, y - 8, 8, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#ff0000';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.fillStyle = '#fff';
-    ctx.font = '10px serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('☠', x, y - 8);
-  }
-
-  // Draw text with shadow
-  drawText(text, x, y, color = '#fff', font = '14px sans-serif', align = 'left') {
-    const ctx = this.ctx;
-    ctx.font = font;
-    ctx.textAlign = align;
-    ctx.textBaseline = 'top';
-    ctx.shadowColor = '#000';
-    ctx.shadowBlur = 3;
-    ctx.fillStyle = color;
-    ctx.fillText(text, x, y);
-    ctx.shadowBlur = 0;
-  }
-
-  // Draw a damage number floating effect
-  drawDamageNumber(x, y, damage, type = 'hit') {
-    // This is called from the combat renderer
-    const colors = { hit: '#ff4444', miss: '#888', heal: '#44ff44', crit: '#ffaa00' };
-    this.drawText(
-      type === 'miss' ? 'MISS' : (type === 'crit' ? `${damage}!` : String(damage)),
-      x, y,
-      colors[type] || '#fff',
-      'bold 14px sans-serif',
-      'center'
-    );
-  }
-
-  // Draw night overlay
-  drawNightOverlay(alpha) {
-    const ctx = this.ctx;
-    ctx.fillStyle = `rgba(0, 0, 30, ${alpha})`;
-    ctx.fillRect(0, 0, this.width, this.height);
-  }
-
-  // Draw a simple progress bar
-  drawProgressBar(x, y, w, h, value, maxValue, fillColor = '#44ff44', bgColor = '#333') {
-    const ctx = this.ctx;
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = fillColor;
-    ctx.fillRect(x, y, Math.max(0, w * (value / maxValue)), h);
+    const barW = cTW * 0.7;
+    const barH = 4;
+    const barX = x - barW / 2;
+    const barY = y + r * 0.15;
+    const hpPct = Math.max(0, unit.hp / unit.maxHP);
+    ctx.fillStyle = '#2a2a2a';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = hpPct > 0.6 ? '#44cc44' : hpPct > 0.3 ? '#cccc22' : '#cc2222';
+    ctx.fillRect(barX, barY, barW * hpPct, barH);
     ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, w, h);
+    ctx.lineWidth = 0.5;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    // Initiative order badge
+    if (unit.initiativeOrder !== undefined) {
+      ctx.font = '8px sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.textAlign = 'right';
+      ctx.fillText(`#${unit.initiativeOrder + 1}`, x + r * 0.95, uy - r * 0.65);
+    }
   }
 }
 
-// Color helpers
-function lightenColor(hex, amount) {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const r = Math.min(255, (num >> 16) + amount);
-  const g = Math.min(255, ((num >> 8) & 0xff) + amount);
-  const b = Math.min(255, (num & 0xff) + amount);
-  return `rgb(${r},${g},${b})`;
+export function initWorldRenderer() {
+  return new WorldRenderer();
 }
 
-function darkenColor(hex, amount) {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const r = Math.max(0, (num >> 16) - amount);
-  const g = Math.max(0, ((num >> 8) & 0xff) - amount);
-  const b = Math.max(0, (num & 0xff) - amount);
-  return `rgb(${r},${g},${b})`;
-}
-
-export default Renderer;
+export default WorldRenderer;
