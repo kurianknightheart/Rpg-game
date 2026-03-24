@@ -587,6 +587,9 @@ if (btnDpad) {
   });
 }
 
+// Settlement close via data-close button
+document.addEventListener('settlement:close', () => exitSettlement());
+
 // Add travel log entry helper (used throughout game)
 function addTravelLog(msg) {
   const log = el('travelLog');
@@ -624,11 +627,14 @@ document.addEventListener('keydown', (e) => {
       }).catch(() => {});
       break;
     case 'i': case 'I':
-      import('./ui/menus.js').then(({ renderInventoryPanel }) => {
-        if (renderInventoryPanel) renderInventoryPanel(state);
+      import('./ui/inventory-ui.js').then(({ renderInventory }) => {
+        renderInventory(state);
         const panel = el('inventoryPanel');
         if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'flex' : 'none';
-      }).catch(() => {});
+      }).catch(() => {
+        const panel = el('inventoryPanel');
+        if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'flex' : 'none';
+      });
       break;
     case 'c': case 'C': {
       const camp = el('campPanel');

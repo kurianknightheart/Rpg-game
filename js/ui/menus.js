@@ -120,9 +120,9 @@ export function initMenus(gameState, systems) {
     if (!target) return;
     const panelId = target.dataset.close;
     hidePanel(panelId);
-    // If closing settlement panel, return to overworld
+    // If closing settlement panel, notify main.js to return to overworld
     if (panelId === 'settlementPanel') {
-      import('./settlement.js').then(({ closeSettlement }) => closeSettlement(gameState)).catch(() => {});
+      document.dispatchEvent(new CustomEvent('settlement:close'));
     }
   });
 
@@ -327,28 +327,6 @@ export function initMenus(gameState, systems) {
     });
   }
 
-  // ── Settlement tab buttons ─────────────────────────────────
-  document.addEventListener('click', (e) => {
-    const tab = e.target.closest('.tab-btn');
-    if (!tab) return;
-    const tabName = tab.dataset.tab;
-    if (!tabName) return;
-
-    // Toggle active class
-    document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-
-    // Render appropriate tab content
-    const settlement = gameState._currentSettlement;
-    if (!settlement) return;
-
-    import('./settlement.js').then(({ renderMarket, renderTavern, renderContracts, renderSmith }) => {
-      if (tabName === 'market') renderMarket(settlement, gameState);
-      else if (tabName === 'tavern') renderTavern(settlement, gameState);
-      else if (tabName === 'contracts') renderContracts(settlement, gameState);
-      else if (tabName === 'smith') renderSmith(settlement, gameState);
-    }).catch(() => {});
-  });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -389,7 +367,8 @@ function _startNewGame(gameState, systems) {
 
   // Create leader from selected background
   try {
-    const leader = createCharacter(bgId, { name: `${companyName} Leader` });
+    const leader = createCharacter(bgId);
+    leader.name = `${companyName} Leader`;
     equipStartingGear(leader);
     leader.isLeader = true;
     gameState.roster.push(leader);
