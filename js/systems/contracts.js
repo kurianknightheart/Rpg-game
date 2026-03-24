@@ -107,9 +107,10 @@ export function acceptContract(state, contract) {
 
   contract.status = 'active';
   contract.acceptedDay = state.day;
-  contract.expiresDay = state.day + (contract.duration || 7);
+  contract.expiresDay = state.day + (contract.durationDays || contract.duration || 7);
   state.contracts.active = state.contracts.active || [];
   state.contracts.active.push(contract);
+  return true;
 }
 
 /**

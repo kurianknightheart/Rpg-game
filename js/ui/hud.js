@@ -207,3 +207,32 @@ export class HUD {
 }
 
 export default HUD;
+
+// Standalone helpers for dynamic imports in menus.js
+export function updateHUD(state) {
+  const set = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  if (!state) return;
+  const h = Math.floor(state.hour || 6);
+  const m = Math.floor(((state.hour || 6) - h) * 60);
+  set('hudDay', `Day ${state.day || 1}`);
+  set('hudTime', `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+  const gold = state.company?.gold || 0;
+  set('hudGold', gold >= 1000 ? `${(gold/1000).toFixed(1)}k` : gold);
+  set('hudFood', state.company?.food || 0);
+  set('hudMorale', state.company?.morale || 50);
+  const alive = (state.roster || []).filter(c => c.alive).length;
+  set('hudPartySize', `${alive}/${state.maxRosterSize || 12}`);
+}
+
+// Signature: addTravelLog(stateOrMsg, msg?, type?)
+// Supports both addTravelLog('text') and addTravelLog(state, 'text', 'type')
+export function addTravelLog(stateOrMsg, msg, type) {
+  const text = typeof stateOrMsg === 'string' ? stateOrMsg : (msg || '');
+  const log = document.getElementById('travelLog');
+  if (!log) return;
+  const div = document.createElement('div');
+  div.className = `log-entry${type ? ' log-' + type : ''}`;
+  div.textContent = text;
+  log.insertBefore(div, log.firstChild);
+  while (log.children.length > 8) log.removeChild(log.lastChild);
+}

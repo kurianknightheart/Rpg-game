@@ -2,6 +2,7 @@
 import state from '../state/gamestate.js';
 import ITEMS from '../../data/items.js';
 import BACKGROUNDS from '../../data/recruits.js';
+import { FACTIONS } from '../systems/factions.js';
 import { generateMarketInventory, getBuyPrice, getSellPrice } from '../systems/economy.js';
 import { addItem, removeItem, equipItem } from '../systems/inventory.js';
 import { createCharacter } from '../systems/character.js';
@@ -69,6 +70,7 @@ export class SettlementUI {
       { id: 'tavern', label: '🍺 Tavern', show: services.includes('tavern') },
       { id: 'contracts', label: '📜 Contracts', show: services.includes('contracts') },
       { id: 'smith', label: '🔨 Smith', show: services.includes('smith') },
+      { id: 'factions', label: '⚑ Factions', show: services.includes('contracts') || services.includes('guild') },
     ].filter(t => t.show);
 
     this.container.innerHTML = `
@@ -105,6 +107,7 @@ export class SettlementUI {
       case 'tavern': this._renderTavern(content); break;
       case 'contracts': this._renderContracts(content); break;
       case 'smith': this._renderSmith(content); break;
+      case 'factions': this._renderFactions(content); break;
     }
   }
 
@@ -298,13 +301,22 @@ export class SettlementUI {
         <h4>Your Active Contracts</h4>
         ${(state.contracts.active || []).length === 0
           ? '<p class="empty-msg">None.</p>'
-          : (state.contracts.active || []).map(c => `
+          : (state.contracts.active || []).map(c => {
+              const total = c.durationDays || c.duration || 7;
+              const elapsed = Math.max(0, (state.day || 1) - (c.acceptedDay || 1));
+              const pct = Math.min(100, Math.round((elapsed / total) * 100));
+              const daysLeft = Math.max(0, (c.expiresDay || 1) - (state.day || 1));
+              return `
               <div class="contract-card active">
                 <div class="contract-title">${c.title}</div>
                 <div class="contract-desc">${c.desc}</div>
+                <div class="contract-progress">
+                  <div class="contract-progress-bar"><div class="contract-progress-fill" style="width:${pct}%"></div></div>
+                  <span class="contract-days-left">${daysLeft}d left</span>
+                </div>
                 <div class="contract-footer">Reward: <strong>${c.reward}g</strong> · Due: Day ${c.expiresDay || '?'}</div>
-              </div>
-            `).join('')
+              </div>`;
+            }).join('')
         }
       </div>
     `;
@@ -403,6 +415,47 @@ export class SettlementUI {
         this._renderSmith(content);
       };
     });
+  }
+
+  _renderFactions(content) {
+    const factionRep = state.factions || {};
+    const factionList = Object.values(FACTIONS).filter(f => f.id !== 'none');
+
+    const repLabel = (rep) => {
+      if (rep >= 75) return { label: 'Honored', color: '#44ff88' };
+      if (rep >= 50) return { label: 'Liked', color: '#88ff88' };
+      if (rep >= 25) return { label: 'Friendly', color: '#aaffaa' };
+      if (rep >= -24) return { label: 'Neutral', color: '#cccccc' };
+      if (rep >= -49) return { label: 'Unfriendly', color: '#ffaa44' };
+      if (rep >= -74) return { label: 'Hostile', color: '#ff7722' };
+      return { label: 'Enemy', color: '#ff4444' };
+    };
+
+    content.innerHTML = `
+      <div class="factions-header">
+        <h4>⚑ Faction Standing</h4>
+        <p>Your reputation determines available contracts and pricing.</p>
+      </div>
+      <div class="faction-display">
+        ${factionList.map(f => {
+          const rep = factionRep[f.id] || 0;
+          const pct = Math.round(((rep + 100) / 200) * 100);
+          const { label, color } = repLabel(rep);
+          return `
+            <div class="faction-row">
+              <div class="faction-icon" style="background:${f.color}22;border-color:${f.color}44;color:${f.color}">⚑</div>
+              <div class="faction-name">
+                <span>${f.name}</span>
+                <small>${f.desc}</small>
+              </div>
+              <div class="faction-rep-bar">
+                <div class="faction-rep-fill" style="width:${pct}%;background:${color}"></div>
+              </div>
+              <div class="faction-rep-label" style="color:${color}">${label} (${rep > 0 ? '+' : ''}${rep})</div>
+            </div>`;
+        }).join('')}
+      </div>
+    `;
   }
 
   _showMsg(content, text, type = 'info') {

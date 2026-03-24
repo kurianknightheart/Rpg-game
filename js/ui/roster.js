@@ -167,3 +167,42 @@ export class RosterUI {
 }
 
 export default RosterUI;
+
+// Standalone function for dynamic import in menus.js
+export function renderRoster(state) {
+  const container = document.getElementById('rosterList');
+  if (!container) return;
+
+  const roster = state.roster || [];
+  if (roster.length === 0) {
+    container.innerHTML = '<p class="empty-msg">No mercenaries.</p>';
+    return;
+  }
+
+  container.innerHTML = roster.map(char => {
+    const alive = char.alive && char.hp > 0;
+    const hpPct = char.maxHP > 0 ? Math.max(0, (char.hp / char.maxHP) * 100) : 0;
+    const hpColor = hpPct > 50 ? '#44aa44' : hpPct > 25 ? '#aaaa44' : '#aa4444';
+    const bg = BACKGROUNDS[char.background];
+    const weapon = char.equipment?.mainhand ? ITEMS[char.equipment.mainhand] : null;
+    const armor  = char.equipment?.body     ? ITEMS[char.equipment.body]     : null;
+    return `
+      <div class="roster-item ${!alive ? 'dead' : ''}">
+        <div class="roster-icon">${char.name.charAt(0)}</div>
+        <div class="roster-info">
+          <div class="roster-name">${char.name}</div>
+          <div class="roster-sub">${bg ? bg.name : char.background} · Lv ${char.level || 1}</div>
+          <div class="hp-bar-wrap" style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;margin-top:3px">
+            <div style="height:100%;width:${hpPct}%;background:${hpColor};border-radius:2px"></div>
+          </div>
+        </div>
+        <div class="roster-stats">
+          <span>${char.hp}/${char.maxHP} HP</span>
+          <span>${weapon ? weapon.name : 'Unarmed'}</span>
+          <span>${armor ? armor.name : 'No Armor'}</span>
+          <span>${char.wage || 3}g/day</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
