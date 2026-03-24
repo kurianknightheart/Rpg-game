@@ -2044,3 +2044,249 @@
 .cs-col::-webkit-scrollbar { width: 4px; }
 .cs-col::-webkit-scrollbar-track { background: transparent; }
 .cs-col::-webkit-scrollbar-thumb { background: rgba(212,168,67,0.25); border-radius: 2px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ENHANCED AESTHETICS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── HUD top bar glow border ── */
+.hud-top {
+  border-bottom: 1px solid rgba(212,168,67,0.22);
+  box-shadow: 0 1px 18px rgba(0,0,0,0.6);
+}
+
+/* ── HUD bottom bar glow border ── */
+.hud-bottom {
+  border-top: 1px solid rgba(212,168,67,0.18);
+  box-shadow: 0 -1px 18px rgba(0,0,0,0.6);
+}
+
+/* ── HUD buttons – lift on hover ── */
+.hud-btn {
+  transition: all 0.14s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+.hud-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.7), 0 0 8px rgba(212,168,67,0.18);
+}
+.hud-btn:active { transform: translateY(0); }
+
+/* ── Mini member hover subtle glow ── */
+.mini-member:hover {
+  box-shadow: 0 0 8px rgba(212,168,67,0.25);
+}
+
+/* ── Resource items glow on gold ── */
+.res-item {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.res-item:hover {
+  border-color: rgba(212,168,67,0.45);
+  box-shadow: 0 0 8px rgba(212,168,67,0.15);
+}
+
+/* ── Travel log entries – animated in ── */
+.log-entry {
+  animation: logFadeIn 0.4s ease;
+}
+@keyframes logFadeIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Combat HUD styling ── */
+.combat-hud-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  padding: 10px;
+  font-family: var(--font-ui);
+}
+
+.combat-turn-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(212,168,67,0.25);
+  border-radius: 4px;
+}
+
+.combat-round {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  color: rgba(212,168,67,0.6);
+  letter-spacing: 0.08em;
+}
+
+.combat-turn {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+}
+.combat-turn.player { color: #6eb0ff; }
+.combat-turn.enemy  { color: #ff7070; }
+
+.combat-units-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.units-section {
+  flex: 1;
+  min-width: 120px;
+}
+
+.units-section strong {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 10px;
+  color: rgba(212,168,67,0.55);
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.units-section.enemy strong { color: rgba(255,100,100,0.55); }
+
+.unit-hud-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  margin-bottom: 2px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  font-size: 11px;
+  transition: background 0.12s;
+}
+
+.unit-hud-item.current {
+  background: rgba(212,168,67,0.10);
+  border-color: rgba(212,168,67,0.30);
+  box-shadow: 0 0 6px rgba(212,168,67,0.12);
+}
+
+.unit-hud-item.dead {
+  opacity: 0.35;
+  text-decoration: line-through;
+}
+
+.unit-letter {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(60,100,200,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  flex-shrink: 0;
+}
+
+.units-section.enemy .unit-letter {
+  background: rgba(200,60,60,0.4);
+}
+
+.unit-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  color: var(--color-text-dim);
+}
+
+.unit-hp-bar {
+  width: 48px;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.unit-hp-bar div {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.unit-hp {
+  font-size: 9px;
+  color: var(--color-text-dim);
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.btn-combat-action {
+  padding: 7px 14px;
+  border: 1px solid rgba(212,168,67,0.45);
+  border-radius: 4px;
+  background: rgba(30,22,5,0.88);
+  color: rgba(212,168,67,0.90);
+  font-family: var(--font-heading);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.btn-combat-action:hover {
+  background: rgba(80,55,5,0.95);
+  box-shadow: 0 0 10px rgba(212,168,67,0.25);
+  border-color: rgba(212,168,67,0.75);
+}
+.btn-combat-action.btn-retreat {
+  border-color: rgba(200,60,60,0.45);
+  color: rgba(220,100,100,0.90);
+}
+.btn-combat-action.btn-retreat:hover {
+  background: rgba(80,20,5,0.95);
+  border-color: rgba(200,60,60,0.75);
+}
+
+.enemy-turn-label {
+  font-size: 11px;
+  color: rgba(255,100,100,0.65);
+  font-style: italic;
+  font-family: var(--font-heading);
+  animation: blink 1.2s infinite;
+}
+@keyframes blink {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+/* ── Notification pop ── */
+.notification {
+  animation: notifySlide 0.25s ease;
+}
+@keyframes notifySlide {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Panel headers ── */
+.panel-header {
+  background: linear-gradient(to right,
+    rgba(212,168,67,0.08) 0%,
+    rgba(212,168,67,0.04) 50%,
+    rgba(212,168,67,0.08) 100%);
+  border-bottom: 1px solid rgba(212,168,67,0.22);
+}
+
+/* ── Roster items hover ── */
+.roster-item {
+  transition: background 0.12s, border-color 0.12s;
+}
+.roster-item:hover {
+  background: rgba(212,168,67,0.06);
+  border-color: rgba(212,168,67,0.35);
+}

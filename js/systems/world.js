@@ -424,3 +424,62 @@ export function getEnemyPartyAt(state, col, row, radius = 1) {
   }
   return null;
 }
+
+// ── Random roaming for all alive enemy parties ────────────────────────────
+
+// 8-directional moves shuffled each call
+const _ROAM_DIRS = [
+  [-1,-1],[0,-1],[1,-1],
+  [-1, 0],       [1, 0],
+  [-1, 1],[0, 1],[1, 1],
+];
+
+function _shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * Move each alive enemy party one tile in a random passable direction.
+ * Call periodically (e.g. every 8+ game-hours) from the game loop.
+ * moveChance: probability (0–1) that a given party actually moves this tick.
+ */
+export function updateEnemyRoaming(state, moveChance = 0.45) {
+  const { tiles, enemyParties, width, height, partyPos } = state.world;
+  if (!enemyParties || !tiles) return;
+
+  for (const ep of enemyParties) {
+    if (!ep.alive) continue;
+    if (Math.random() > moveChance) continue;
+
+    const dirs = _shuffle(_ROAM_DIRS);
+    for (const [dc, dr] of dirs) {
+      const nc = ep.col + dc;
+      const nr = ep.row + dr;
+      if (nc < 0 || nr < 0 || nc >= width || nr >= height) continue;
+
+      const tile = tiles[nr] && tiles[nr][nc];
+      if (!tile) continue;
+      const type = tile.type;
+      // Impassable for roaming enemies
+      if (type === T_WATER || type === T_MOUNTAINS || type === T_SETTLEMENT) continue;
+
+      // Don't walk onto player position
+      if (partyPos && nc === partyPos.col && nr === partyPos.row) continue;
+
+      // Don't collide with another enemy party
+      const occupied = enemyParties.some(
+        p => p !== ep && p.alive && p.col === nc && p.row === nr
+      );
+      if (occupied) continue;
+
+      ep.col = nc;
+      ep.row = nr;
+      break;
+    }
+  }
+}

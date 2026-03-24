@@ -9,7 +9,7 @@ import { WorldRenderer } from './engine/renderer.js';
 import { InputManager } from './engine/input.js';
 import { playSound, playMusic, stopMusic, SOUNDS } from './engine/audio.js';
 
-import { generateWorld, moveParty, updateWorldMovement, revealFog } from './systems/world.js';
+import { generateWorld, moveParty, updateWorldMovement, revealFog, updateEnemyRoaming } from './systems/world.js';
 import { initCombat, endCombat, generateLoot } from './systems/combat.js';
 import { checkTravelEvent } from './systems/events.js';
 import { processDailyUpkeep } from './systems/economy.js';
@@ -372,6 +372,10 @@ function _getKeyboardDir() {
 // Daily event accumulator
 let _lastDay = 1;
 
+// Enemy roaming: accumulate real time; enemies move every ~8 s of real time
+let _enemyRoamAccum = 0;
+const ENEMY_ROAM_INTERVAL = 8.0; // seconds
+
 function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 
@@ -426,6 +430,13 @@ function gameLoop(timestamp) {
           _showEventModal(event);
         }
       }
+    }
+
+    // Enemy roaming
+    _enemyRoamAccum += elapsed;
+    if (_enemyRoamAccum >= ENEMY_ROAM_INTERVAL) {
+      _enemyRoamAccum -= ENEMY_ROAM_INTERVAL;
+      updateEnemyRoaming(state);
     }
 
     // Render world
@@ -757,10 +768,7 @@ document.addEventListener('keydown', (e) => {
         renderInventory(state);
         const panel = el('inventoryPanel');
         if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'flex' : 'none';
-      }).catch(() => {
-        const panel = el('inventoryPanel');
-        if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'flex' : 'none';
-      });
+      }).catch(() => {});
       break;
     case 'c': case 'C': {
       const camp = el('campPanel');
