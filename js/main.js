@@ -20,6 +20,7 @@ import HUD from './ui/hud.js';
 import { CombatUI } from './ui/combat-ui.js';
 import { SettlementUI } from './ui/settlement.js';
 import { MobileControls } from './ui/mobile-controls.js';
+import { getCharacterStatsScreen } from './ui/character-stats.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Canvas / context setup
@@ -100,14 +101,28 @@ function _updateMiniRoster(s) {
   const container = el('miniRoster');
   if (!container) return;
   const alive = (s.roster || []).filter(c => c.alive);
+
   container.innerHTML = alive.slice(0, 6).map(c => {
     const pct = Math.round(Math.max(0, Math.min(100, (c.hp / (c.maxHP || 1)) * 100)));
     const col = pct > 60 ? '#44cc66' : pct > 30 ? '#ddaa22' : '#cc3322';
-    return `<div class="mini-member" title="${c.name} ${c.hp}/${c.maxHP}HP">
+    return `<div class="mini-member" data-char-id="${c.id}" title="${c.name} – Click for stats">
       <span class="mini-name">${c.name.split(' ')[0].substring(0,6)}</span>
       <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${pct}%;background:${col}"></div></div>
     </div>`;
   }).join('');
+
+  // Re-bind click handlers after innerHTML update
+  container.querySelectorAll('.mini-member[data-char-id]').forEach(card => {
+    card.addEventListener('click', () => {
+      const charId = card.dataset.charId;
+      if (charId) _openCharStats(charId);
+    });
+  });
+}
+
+function _openCharStats(charId) {
+  const statsScreen = getCharacterStatsScreen(state);
+  statsScreen.open(charId);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -329,6 +344,31 @@ let _lastTime = 0;
 const MOVE_STEP_INTERVAL = 0.3; // seconds between party steps
 let _moveAccum = 0;
 
+// Held keyboard direction tracking (for smooth WASD/arrow movement)
+const _heldKeys = new Set();
+
+function _getKeyboardDir() {
+  // Map held keys to isometric direction
+  const up    = _heldKeys.has('ArrowUp')    || _heldKeys.has('w') || _heldKeys.has('W');
+  const down  = _heldKeys.has('ArrowDown')  || _heldKeys.has('s') || _heldKeys.has('S');
+  const left  = _heldKeys.has('ArrowLeft')  || _heldKeys.has('a') || _heldKeys.has('A');
+  const right = _heldKeys.has('ArrowRight') || _heldKeys.has('d') || _heldKeys.has('D');
+
+  // Isometric mapping (same as original arrow key behaviour)
+  let dCol = 0, dRow = 0;
+  if (up    && !down)  { dCol += -1; dRow += -1; }
+  if (down  && !up)    { dCol +=  1; dRow +=  1; }
+  if (left  && !right) { dCol += -1; dRow +=  1; }
+  if (right && !left)  { dCol +=  1; dRow += -1; }
+
+  // Clamp diagonals that would double-add
+  dCol = Math.max(-1, Math.min(1, dCol));
+  dRow = Math.max(-1, Math.min(1, dRow));
+
+  if (dCol === 0 && dRow === 0) return null;
+  return { dCol, dRow };
+}
+
 // Daily event accumulator
 let _lastDay = 1;
 
@@ -344,6 +384,21 @@ function gameLoop(timestamp) {
 
     if (_moveAccum >= MOVE_STEP_INTERVAL) {
       _moveAccum -= MOVE_STEP_INTERVAL;
+
+      // Feed joystick / held-key direction into the path queue when empty
+      const world = state.world;
+      if (!world.movePath || world.movePath.length === 0) {
+        const joyDir = mobileControls.getActiveDir();
+        const kbDir  = _getKeyboardDir();
+        const dir    = joyDir || kbDir;
+        if (dir && world.partyPos) {
+          const nc = world.partyPos.col + dir.dCol;
+          const nr = world.partyPos.row + dir.dRow;
+          if (nc >= 0 && nr >= 0 && nc < world.width && nr < world.height) {
+            moveParty(state, nc, nr);
+          }
+        }
+      }
 
       const result = updateWorldMovement(state, MOVE_STEP_INTERVAL);
       handleMoveResult(result);
@@ -590,6 +645,70 @@ if (btnDpad) {
 // Settlement close via data-close button
 document.addEventListener('settlement:close', () => exitSettlement());
 
+// HUD roster/inventory/camp buttons (bottom bar)
+const _btnRoster = el('btnRoster');
+if (_btnRoster) {
+  _btnRoster.addEventListener('click', () => {
+    import('./ui/roster.js').then(({ renderRoster }) => {
+      renderRoster(state);
+      const panel = el('rosterPanel');
+      if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'flex' : 'none';
+    }).catch(() => {});
+  });
+}
+
+const _btnInventory = el('btnInventory');
+if (_btnInventory) {
+  _btnInventory.addEventListener('click', () => {
+    import('./ui/inventory-ui.js').then(({ renderInventory }) => {
+      renderInventory(state);
+      const panel = el('inventoryPanel');
+      if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'flex' : 'none';
+    }).catch(() => {});
+  });
+}
+
+const _btnCamp = el('btnCamp');
+if (_btnCamp) {
+  _btnCamp.addEventListener('click', () => {
+    const camp = el('campPanel');
+    if (camp) {
+      const cost = state.roster.filter(c => c.alive).length;
+      const costEl = el('campFoodCost');
+      if (costEl) costEl.textContent = cost;
+      camp.style.display = camp.style.display === 'none' || !camp.style.display ? 'flex' : 'none';
+    }
+  });
+}
+
+const _btnPause = el('btnPause');
+if (_btnPause) {
+  _btnPause.addEventListener('click', () => {
+    state.paused = true;
+    showPanel('pauseMenu');
+  });
+}
+
+// Roster panel – click a roster item to open character stats
+document.addEventListener('click', (e) => {
+  const item = e.target.closest('.roster-item[data-char-id], .roster-item');
+  if (!item) return;
+  // Try to get charId from data attribute, else find by position
+  const charId = item.dataset.charId;
+  if (charId) {
+    _openCharStats(charId);
+    return;
+  }
+  // Fallback: find by index
+  const list = item.parentElement;
+  if (!list) return;
+  const idx = Array.from(list.children).indexOf(item);
+  if (idx >= 0) {
+    const statsScreen = getCharacterStatsScreen(state);
+    statsScreen.openIndex(idx);
+  }
+});
+
 // Add travel log entry helper (used throughout game)
 function addTravelLog(msg) {
   const log = el('travelLog');
@@ -607,6 +726,13 @@ function addTravelLog(msg) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 document.addEventListener('keydown', (e) => {
+  // Track held movement keys regardless of screen
+  const moveKeys = ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','W','a','A','s','S','d','D'];
+  if (moveKeys.includes(e.key)) {
+    e.preventDefault();
+    _heldKeys.add(e.key);
+  }
+
   if (state.screen !== 'overworld') return;
 
   switch (e.key) {
@@ -646,19 +772,6 @@ document.addEventListener('keydown', (e) => {
       }
       break;
     }
-    // Arrow key movement (isometric directions)
-    case 'ArrowUp':    case 'w': case 'W':
-      e.preventDefault();
-      mobileControls._onDir(-1, -1); break;
-    case 'ArrowDown':  case 's': case 'S':
-      e.preventDefault();
-      mobileControls._onDir(1, 1); break;
-    case 'ArrowLeft':  case 'a': case 'A':
-      e.preventDefault();
-      mobileControls._onDir(-1, 1); break;
-    case 'ArrowRight': case 'd': case 'D':
-      e.preventDefault();
-      mobileControls._onDir(1, -1); break;
     case '+': case '=':
       worldCamera.zoom(1.15);
       break;
@@ -666,6 +779,10 @@ document.addEventListener('keydown', (e) => {
       worldCamera.zoom(1 / 1.15);
       break;
   }
+});
+
+document.addEventListener('keyup', (e) => {
+  _heldKeys.delete(e.key);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

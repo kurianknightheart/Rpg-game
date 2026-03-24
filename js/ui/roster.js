@@ -187,7 +187,7 @@ export function renderRoster(state) {
     const weapon = char.equipment?.mainhand ? ITEMS[char.equipment.mainhand] : null;
     const armor  = char.equipment?.body     ? ITEMS[char.equipment.body]     : null;
     return `
-      <div class="roster-item ${!alive ? 'dead' : ''}">
+      <div class="roster-item ${!alive ? 'dead' : ''}" data-char-id="${char.id}" style="cursor:pointer">
         <div class="roster-avatar" style="background:${alive ? '#2a4a8a' : '#333'}">${char.name.charAt(0)}</div>
         <div class="roster-info">
           <div class="roster-name">${char.name}</div>
