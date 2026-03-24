@@ -542,100 +542,15 @@ export class CombatUI {
 
   _handleCombatEnd(result) {
     this.stop();
-    state.combat.active = false;
     state.combat.result = result;
 
-    if (result === 'player_win') {
-      const ep = state.combat.enemyPartyRef;
-      endCombat(state, 'player_win');
-      const loot = ep ? generateLoot(state, ep) : [];
-      this._showVictoryScreen(loot);
-    } else if (result === 'enemy_win') {
-      endCombat(state, 'enemy_win');
-      this._showDefeatScreen();
-    } else if (result === 'retreat') {
-      endCombat(state, 'retreat');
-      this._returnToWorld();
+    // Dispatch event so main.js handles transitions and loot modals
+    if (this.canvas) {
+      this.canvas.dispatchEvent(new CustomEvent('combatEnd', {
+        detail: result,
+        bubbles: true,
+      }));
     }
-  }
-
-  _showVictoryScreen(loot) {
-    playSound('combat_end');
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="modal-box victory">
-        <h2>⚔️ Victory!</h2>
-        <p>Your company prevails!</p>
-        <div class="loot-list">
-          <h4>Loot:</h4>
-          ${loot.map(l => {
-            if (l.isGold) return `<div class="loot-item">💰 ${l.qty} gold</div>`;
-            const item = ITEMS[l.itemId];
-            return `<div class="loot-item">${item ? item.name : l.itemId} x${l.qty}</div>`;
-          }).join('') || '<p>No loot found.</p>'}
-        </div>
-        <button class="btn-primary" id="victory-ok">Continue</button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    // Add loot to company inventory
-    for (const l of loot) {
-      if (l.isGold) {
-        state.company.gold = (state.company.gold || 0) + l.qty;
-      } else {
-        const item = ITEMS[l.itemId];
-        if (item) {
-          const { addItem: addItemFn } = window._invModule || {};
-          if (!state.inventory) state.inventory = [];
-          const existing = state.inventory.find(s => s.itemId === l.itemId && item.stackable);
-          if (existing) {
-            existing.qty = (existing.qty || 1) + l.qty;
-          } else {
-            state.inventory.push({ itemId: l.itemId, qty: l.qty, ...item });
-          }
-        }
-      }
-    }
-
-    modal.querySelector('#victory-ok').onclick = () => {
-      modal.remove();
-      this._returnToWorld();
-    };
-  }
-
-  _showDefeatScreen() {
-    const modal = document.createElement('div');
-    modal.className = 'modal-overlay';
-    modal.innerHTML = `
-      <div class="modal-box defeat">
-        <h2>💀 Defeat</h2>
-        <p>Your company has been routed. Many good men died today.</p>
-        <button class="btn-primary" id="defeat-ok">Continue</button>
-      </div>
-    `;
-    document.body.appendChild(modal);
-    modal.querySelector('#defeat-ok').onclick = () => {
-      modal.remove();
-      this._returnToWorld();
-    };
-  }
-
-  _returnToWorld() {
-    // Show world canvas, hide combat canvas
-    const worldCanvas = document.getElementById('world-canvas');
-    const combatCanvas = document.getElementById('combat-canvas');
-    const combatHUD = document.getElementById('combat-hud');
-    const mainHUD = document.getElementById('hud');
-
-    if (combatCanvas) combatCanvas.style.display = 'none';
-    if (combatHUD) combatHUD.style.display = 'none';
-    if (worldCanvas) worldCanvas.style.display = '';
-    if (mainHUD) mainHUD.style.display = '';
-
-    state.phase = 'world';
-    state.combat.active = false;
   }
 }
 

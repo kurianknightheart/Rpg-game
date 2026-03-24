@@ -197,6 +197,11 @@ function enterCombat(enemyParty) {
     && state.world.tiles[state.world.partyPos.row][state.world.partyPos.col];
   const terrainType = tile ? tile.type : 0;
 
+  // Store for post-combat loot generation
+  state.combat.enemyPartyData = enemyParty;
+
+  showPanel('combatHUD');
+
   const playerParty = state.roster.filter(c => c.alive && c.hp > 0);
   combatUI.start(playerParty, enemyParty, terrainType);
 
@@ -207,22 +212,25 @@ function enterCombat(enemyParty) {
 function onCombatEnd(evt) {
   const result = evt.detail || state.combat.result;
   state.paused = false;
+  hidePanel('combatHUD');
 
   if (result === 'player_win') {
     playMusic(SOUNDS.music_victory);
     const loot = generateLoot(state, state.combat.enemyPartyData);
-    // Mark enemy party as defeated
     if (state.combat.enemyPartyRef) {
       state.combat.enemyPartyRef.alive = false;
     }
     endCombat(state);
-    // Show loot modal
     _showLootModal(loot);
+  } else if (result === 'retreat') {
+    endCombat(state);
+    notify('Your company retreats from battle.');
+    enterOverworld();
   } else {
+    // enemy_win
     playMusic(SOUNDS.music_defeat);
     endCombat(state);
     notify('Your company was defeated…');
-    // Check if total wipe
     const alive = state.roster.filter(c => c.alive && c.hp > 0);
     if (alive.length === 0) {
       setTimeout(() => {
