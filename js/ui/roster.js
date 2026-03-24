@@ -188,18 +188,17 @@ export function renderRoster(state) {
     const armor  = char.equipment?.body     ? ITEMS[char.equipment.body]     : null;
     return `
       <div class="roster-item ${!alive ? 'dead' : ''}">
-        <div class="roster-icon">${char.name.charAt(0)}</div>
+        <div class="roster-avatar" style="background:${alive ? '#2a4a8a' : '#333'}">${char.name.charAt(0)}</div>
         <div class="roster-info">
           <div class="roster-name">${char.name}</div>
-          <div class="roster-sub">${bg ? bg.name : char.background} · Lv ${char.level || 1}</div>
-          <div class="hp-bar-wrap" style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;margin-top:3px">
-            <div style="height:100%;width:${hpPct}%;background:${hpColor};border-radius:2px"></div>
+          <div class="roster-bg">${bg ? bg.name : char.background} · Lv ${char.level || 1}</div>
+          <div class="roster-hp-bar">
+            <div class="roster-hp-fill ${hpPct < 30 ? 'critical' : hpPct < 60 ? 'low' : ''}" style="width:${hpPct}%"></div>
           </div>
         </div>
         <div class="roster-stats">
-          <span>${char.hp}/${char.maxHP} HP</span>
+          <span>${char.hp}/${char.maxHP}hp</span>
           <span>${weapon ? weapon.name : 'Unarmed'}</span>
-          <span>${armor ? armor.name : 'No Armor'}</span>
           <span>${char.wage || 3}g/day</span>
         </div>
       </div>
