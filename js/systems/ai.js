@@ -199,8 +199,6 @@ export class AIController {
 export default AIController;
 
 // Free-function API for main.js
-import { distManhattan, distChebyshev } from '../utils/math.js';
-import { getMainWeapon } from './inventory.js';
 
 /**
  * Run the AI turn for all enemy units in combat state.

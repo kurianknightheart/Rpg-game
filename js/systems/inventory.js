@@ -217,17 +217,44 @@ export function getEquippedItem(char, slot) {
   return id ? ITEMS[id] : null;
 }
 
-// Alias for addToInventory used by main.js
-export function addItem(inventory, itemOrId, count = 1) {
-  if (typeof itemOrId === 'string') {
-    return addToInventory(inventory, itemOrId, count);
-  }
-  if (itemOrId && itemOrId.itemId) {
-    return addToInventory(inventory, itemOrId.itemId, itemOrId.count || count);
-  }
-  return false;
+// -------------------------------------------------------------------------
+// Aliases used by economy.js and menus.js
+// -------------------------------------------------------------------------
+
+/** Add item by ID string to an inventory array. */
+export function addToInventory(inventory, itemId, qty = 1) {
+  const def = ITEMS[itemId] || { id: itemId, itemId };
+  addItem(inventory, def, qty);
 }
 
-export function getArmorValue(char) {
-  return (char.armor || 0) + (char.armorHead || 0);
+/** Remove item by ID from inventory array. */
+export function removeFromInventory(inventory, itemId, qty = 1) {
+  return removeItem(inventory, itemId, qty);
+}
+
+/** Check whether inventory contains at least qty of itemId. */
+export function hasItem(inventory, itemId, qty = 1) {
+  const slot = inventory.find(s => s.itemId === itemId);
+  return slot ? (slot.qty || 1) >= qty : false;
+}
+
+/**
+ * Equip starting gear for a character based on their background's startEquipment list.
+ * Items with an equipment slot are auto-equipped; others go to inventory.
+ */
+export function equipStartingGear(char) {
+  if (!char) return;
+  // startEquipment may be set directly on the character by createCharacter
+  const items = char.startEquipment || [];
+  for (const itemId of items) {
+    const def = ITEMS[itemId];
+    if (!def) continue;
+    if (def.slot && char.equipment && char.equipment[def.slot] == null) {
+      char.equipment[def.slot] = itemId;
+    } else {
+      if (!char.inventory) char.inventory = [];
+      addItem(char.inventory, def, 1);
+    }
+  }
+  calculateDerivedStats(char);
 }

@@ -547,4 +547,13 @@ export function getAvailableEvents(stateSnap) {
   });
 }
 
+/**
+ * Get events available for the given terrain type name.
+ * Events in this dataset are not terrain-gated, so all events are returned.
+ * @param {string} terrain - e.g. 'plains', 'forest', 'hills'
+ */
+export function getEventsByTerrain(terrain = 'plains') {
+  return EVENTS;
+}
+
 export default EVENTS;

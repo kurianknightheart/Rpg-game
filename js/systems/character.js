@@ -271,3 +271,28 @@ export function getWageForBackground(backgroundId) {
   const bg = BACKGROUNDS[backgroundId];
   return bg ? bg.wage : 3;
 }
+
+/**
+ * Estimate melee hit chance (0-100) for attacker vs defender.
+ * Used by AI decision-making.
+ */
+export function getMeleeHitChance(attacker, defender) {
+  const skill = getEffectiveSkill(attacker, 'swords')
+    || getEffectiveSkill(attacker, 'axes')
+    || getEffectiveSkill(attacker, 'maces')
+    || 20;
+  const defSkill = getEffectiveSkill(defender, 'shields') || 10;
+  return Math.max(10, Math.min(90, 50 + (skill - defSkill) / 2));
+}
+
+/**
+ * Estimate ranged hit chance (0-100) for attacker vs defender at given distance.
+ * Used by AI decision-making.
+ */
+export function getRangedHitChance(attacker, defender, distance = 1) {
+  const skill = getEffectiveSkill(attacker, 'bows')
+    || getEffectiveSkill(attacker, 'crossbows')
+    || 20;
+  const rangePenalty = Math.max(0, (distance - 3) * 5);
+  return Math.max(5, Math.min(85, 40 + skill / 2 - rangePenalty));
+}
