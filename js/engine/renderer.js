@@ -3,6 +3,12 @@
 const TILE_W = 64;
 const TILE_H = 32;
 
+// Compact colours for the minimap (same palette as TILE_COLORS)
+const MINI_COLORS = {
+  0: '#3a5a2a', 1: '#1a3a1a', 2: '#5a4a2a', 3: '#4a4a4a',
+  4: '#2a3a1a', 5: '#c0c8d0', 6: '#6a5a3a', 7: '#1a2a5a', 8: '#8B7355',
+};
+
 // World tile colors by type index
 const TILE_COLORS = {
   0: '#3a5a2a', // plains
@@ -128,14 +134,19 @@ export class WorldRenderer {
       }
     }
 
-    // Draw move target highlight
+    // Draw move target – animated pulsing ring
     if (state && state.world && state.world.moveTarget) {
       const mt = state.world.moveTarget;
       const { x, y } = tileToIso(mt.col, mt.row, offsetX, offsetY);
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 250);   // 0..1 oscillation
       drawDiamond(ctx, x, y, TILE_W, TILE_H);
-      ctx.strokeStyle = 'rgba(255, 255, 100, 0.9)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = `rgba(255, 255, 100, ${0.5 + 0.5 * pulse})`;
+      ctx.lineWidth   = 2 + pulse * 1.5;
       ctx.stroke();
+      // Inner fill glow
+      drawDiamond(ctx, x, y, TILE_W * 0.55, TILE_H * 0.55);
+      ctx.fillStyle = `rgba(255, 255, 120, ${0.08 * pulse})`;
+      ctx.fill();
     }
 
     // Draw settlements
@@ -401,6 +412,77 @@ export class WorldRenderer {
       ctx.textAlign = 'right';
       ctx.fillText(`#${unit.initiativeOrder + 1}`, x + r * 0.95, uy - r * 0.65);
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Minimap renderer
+  // -------------------------------------------------------------------------
+
+  /**
+   * Draw an overhead minimap onto a small canvas.
+   * Shows explored terrain, settlements (gold), enemy parties (red), party (blue).
+   * @param {CanvasRenderingContext2D} ctx   – the minimap canvas context
+   * @param {object}                  state  – game state singleton
+   */
+  drawMinimap(ctx, state) {
+    const { tiles, width, height, settlements, enemyParties, partyPos } = state.world;
+    if (!tiles || !width || !height) return;
+
+    const canvas   = ctx.canvas;
+    const tileSize = Math.max(1, Math.floor(Math.min(canvas.width / width, canvas.height / height)));
+
+    // Background
+    ctx.fillStyle = '#06060a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Terrain tiles
+    for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+        const tile = tiles[row] && tiles[row][col];
+        if (!tile) continue;
+        ctx.fillStyle = tile.explored
+          ? (MINI_COLORS[tile.type] || MINI_COLORS[0])
+          : '#0e0e14';
+        ctx.fillRect(col * tileSize, row * tileSize, tileSize, tileSize);
+      }
+    }
+
+    // Settlements (gold dots)
+    if (settlements) {
+      for (const s of settlements) {
+        if (!s) continue;
+        const t = tiles[s.row] && tiles[s.row][s.col];
+        if (!t || !t.explored) continue;
+        ctx.fillStyle = '#d4af37';
+        const x = s.col * tileSize - 1;
+        const y = s.row * tileSize - 1;
+        ctx.fillRect(x, y, tileSize + 2, tileSize + 2);
+      }
+    }
+
+    // Enemy parties (red dots)
+    if (enemyParties) {
+      for (const ep of enemyParties) {
+        if (!ep || !ep.alive) continue;
+        const t = tiles[ep.row] && tiles[ep.row][ep.col];
+        if (!t || !t.explored) continue;
+        ctx.fillStyle = '#cc3333';
+        ctx.fillRect(ep.col * tileSize, ep.row * tileSize, tileSize, tileSize);
+      }
+    }
+
+    // Party position (bright blue, slightly larger)
+    if (partyPos) {
+      ctx.fillStyle = '#4499ff';
+      const px = partyPos.col * tileSize - 1;
+      const py = partyPos.row * tileSize - 1;
+      ctx.fillRect(px, py, tileSize + 2, tileSize + 2);
+    }
+
+    // Border
+    ctx.strokeStyle = 'rgba(212,168,67,0.35)';
+    ctx.lineWidth   = 1;
+    ctx.strokeRect(0.5, 0.5, canvas.width - 1, canvas.height - 1);
   }
 }
 

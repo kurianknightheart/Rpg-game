@@ -102,6 +102,9 @@
       </div>
     </div>
 
+    <!-- Active contract widget (hidden until a contract is active) -->
+    <div id="activeContractWidget" class="active-contract-widget" style="display:none;"></div>
+
     <!-- Mini roster HP bars -->
     <div class="mini-roster" id="miniRoster"></div>
 
@@ -116,7 +119,8 @@
       <button class="hud-btn" id="btnCamp" title="Camp (C)">
         <span class="btn-icon">⛺</span><span class="btn-label">Camp</span>
       </button>
-      <button class="hud-btn" id="btnDpad" title="D-Pad">
+      <button class="hud-btn speed-btn" id="btnSpeed" title="Game speed (Space)">×1</button>
+      <button class="hud-btn" id="btnDpad" title="D-Pad toggle">
         <span class="btn-icon">🕹</span><span class="btn-label">D-Pad</span>
       </button>
       <button class="hud-btn" id="btnPause" title="Menu (Esc)">
@@ -126,6 +130,11 @@
 
     <!-- Travel log -->
     <div class="travel-log" id="travelLog"></div>
+  </div>
+
+  <!-- ===== MINIMAP ===== -->
+  <div id="minimapContainer" class="minimap-container">
+    <canvas id="minimapCanvas" width="160" height="160"></canvas>
   </div>
 
   <!-- ===== MOBILE D-PAD (injected by mobile-controls.js) ===== -->

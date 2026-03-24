@@ -318,3 +318,53 @@ canvas, .hud-btn, .action-btn, .roster-item, .item-card, .market-item {
     bottom: calc(80px + env(safe-area-inset-bottom)) !important;
   }
 }
+
+/* ===== MINIMAP – mobile sizing ===== */
+@media (max-width: 480px) {
+  .minimap-container {
+    bottom: 68px;
+    right: 8px;
+  }
+
+  /* Scale minimap canvas down on small screens */
+  #minimapCanvas {
+    width: 100px !important;
+    height: 100px !important;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .minimap-container {
+    bottom: 50px;
+    right: 8px;
+  }
+  #minimapCanvas {
+    width: 90px !important;
+    height: 90px !important;
+  }
+}
+
+/* ===== ACTIVE CONTRACT WIDGET – mobile ===== */
+@media (max-width: 480px) {
+  .active-contract-widget {
+    top: 46px;
+    right: 8px;
+    max-width: 160px;
+    padding: 3px 7px;
+  }
+}
+
+/* ===== SPEED BUTTON – ensure visible on small screens ===== */
+@media (max-width: 480px) {
+  .speed-btn {
+    min-width: 44px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* ===== D-PAD – ensure always-visible positioning on touch devices ===== */
+@media (hover: none) and (pointer: coarse) {
+  .mobile-dpad {
+    bottom: 80px;
+  }
+}

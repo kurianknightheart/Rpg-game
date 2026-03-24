@@ -85,7 +85,10 @@ export class SettlementUI {
       <div class="settlement-content" id="settlement-content"></div>
     `;
 
-    this.container.querySelector('.btn-close-panel').onclick = () => this.close();
+    this.container.querySelector('.btn-close-panel').onclick = () => {
+      // Dispatch event so main.js exitSettlement() handles full cleanup
+      document.dispatchEvent(new CustomEvent('settlement:close'));
+    };
     this.container.querySelectorAll('.tab-btn').forEach(btn => {
       btn.onclick = () => {
         this.activeTab = btn.dataset.tab;

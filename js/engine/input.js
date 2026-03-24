@@ -204,40 +204,9 @@ export class InputManager {
       }
     };
 
-    // ---- Keyboard ----
+    // ---- Keyboard ---- (key-state tracking only; movement/zoom handled by main.js)
     const onKeyDown = (e) => {
       this._keys[e.code] = true;
-      const PAN_SPEED = 12;
-      const ZOOM_FACTOR = 0.05;
-
-      switch (e.code) {
-        case 'ArrowLeft':
-        case 'KeyA':
-          this.camera.offsetX -= PAN_SPEED / this.camera.zoomLevel;
-          break;
-        case 'ArrowRight':
-        case 'KeyD':
-          this.camera.offsetX += PAN_SPEED / this.camera.zoomLevel;
-          break;
-        case 'ArrowUp':
-        case 'KeyW':
-          this.camera.offsetY -= PAN_SPEED / this.camera.zoomLevel;
-          break;
-        case 'ArrowDown':
-        case 'KeyS':
-          this.camera.offsetY += PAN_SPEED / this.camera.zoomLevel;
-          break;
-        case 'Equal':
-        case 'NumpadAdd':
-          this.camera.zoom(1 + ZOOM_FACTOR);
-          break;
-        case 'Minus':
-        case 'NumpadSubtract':
-          this.camera.zoom(1 - ZOOM_FACTOR);
-          break;
-        default:
-          break;
-      }
     };
 
     const onKeyUp = (e) => {
