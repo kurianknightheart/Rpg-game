@@ -879,3 +879,536 @@
 /* ===== COMBAT RESULT ===== */
 #combatResultContent { margin: 12px 0; font-size: 14px; line-height: 1.6; }
 #combatResultTitle { font-family: var(--font-main); font-size: 22px; }
+
+/* ===== ENHANCED HUD ===== */
+.hud-top {
+  background: linear-gradient(to bottom, rgba(5,5,10,0.95) 0%, rgba(5,5,10,0.7) 100%);
+  border-bottom: 1px solid rgba(212,168,67,0.15);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.hud-bottom {
+  background: linear-gradient(to top, rgba(5,5,10,0.95) 0%, rgba(5,5,10,0.7) 100%);
+  border-top: 1px solid rgba(212,168,67,0.15);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.hud-btn {
+  backdrop-filter: blur(4px);
+  border-color: rgba(212,168,67,0.2);
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hud-btn:hover, .hud-btn:active {
+  border-color: rgba(212,168,67,0.7);
+  background: rgba(212,168,67,0.12);
+  box-shadow: 0 0 12px rgba(212,168,67,0.15);
+  transform: translateY(-1px);
+}
+
+.res-item {
+  backdrop-filter: blur(4px);
+  border-color: rgba(212,168,67,0.18);
+  transition: all 0.15s;
+}
+
+.res-item:hover {
+  border-color: rgba(212,168,67,0.4);
+  background: rgba(212,168,67,0.08);
+}
+
+#hudCompanyName {
+  font-family: var(--font-heading, 'Georgia', serif);
+  letter-spacing: 0.5px;
+}
+
+/* Glowing gold values */
+.res-item span:last-child {
+  color: var(--color-accent, #d4a843);
+  font-weight: 600;
+}
+
+/* ===== TRAVEL LOG ENHANCEMENTS ===== */
+.travel-log {
+  bottom: 72px;
+}
+
+.log-entry {
+  backdrop-filter: blur(4px);
+  animation: logSlideIn 0.3s ease;
+}
+
+@keyframes logSlideIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ===== ENHANCED ROSTER ===== */
+.roster-avatar {
+  background: linear-gradient(135deg, var(--color-surface2), var(--color-surface));
+  border-color: rgba(212,168,67,0.25);
+  font-size: 16px;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
+}
+
+.roster-item:hover .roster-avatar {
+  border-color: rgba(212,168,67,0.7);
+  box-shadow: 0 0 8px rgba(212,168,67,0.2);
+}
+
+/* ===== FACTION DISPLAY ===== */
+.faction-display {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.faction-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--color-surface2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  transition: border-color 0.15s;
+}
+
+.faction-row:hover {
+  border-color: rgba(212,168,67,0.3);
+}
+
+.faction-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.faction-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--color-text);
+  font-family: var(--font-heading, Georgia, serif);
+}
+
+.faction-rep-bar {
+  width: 80px;
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.faction-rep-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.faction-rep-label {
+  font-size: 11px;
+  width: 60px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ===== CONTRACT PROGRESS ===== */
+.contract-item {
+  position: relative;
+}
+
+.contract-progress {
+  margin-top: 8px;
+}
+
+.contract-progress-bar {
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.contract-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-accent-dim, #8b6914), var(--color-accent, #d4a843));
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.contract-days-left {
+  font-size: 10px;
+  color: var(--color-text-dim);
+  margin-top: 3px;
+  text-align: right;
+}
+
+.contract-status-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.contract-status-badge.active {
+  background: rgba(41,128,185,0.2);
+  border: 1px solid rgba(41,128,185,0.5);
+  color: #3498db;
+}
+
+.contract-status-badge.complete {
+  background: rgba(39,174,96,0.2);
+  border: 1px solid rgba(39,174,96,0.5);
+  color: #2ecc71;
+}
+
+.contract-status-badge.failed {
+  background: rgba(192,57,43,0.2);
+  border: 1px solid rgba(192,57,43,0.5);
+  color: #e74c3c;
+}
+
+/* ===== ENHANCED SETTLEMENT TABS ===== */
+.settlement-tabs {
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(10,10,15,0.5);
+}
+
+.tab-btn {
+  position: relative;
+  transition: all 0.2s;
+}
+
+.tab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0; right: 0;
+  height: 2px;
+  background: var(--color-accent, #d4a843);
+  transform: scaleX(0);
+  transition: transform 0.2s;
+}
+
+.tab-btn.active::after {
+  transform: scaleX(1);
+}
+
+/* ===== ENHANCED COMBAT ACTIONS ===== */
+.action-btn {
+  background: linear-gradient(180deg, rgba(30,30,45,0.95) 0%, rgba(15,15,25,0.95) 100%);
+  border-color: rgba(212,168,67,0.25);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(4px);
+}
+
+.action-btn:hover, .action-btn:active {
+  background: linear-gradient(180deg, rgba(212,168,67,0.2) 0%, rgba(212,168,67,0.08) 100%);
+  border-color: rgba(212,168,67,0.7);
+  box-shadow: 0 0 14px rgba(212,168,67,0.2), inset 0 1px 0 rgba(212,168,67,0.1);
+  transform: translateY(-2px);
+}
+
+.action-btn.active {
+  background: rgba(212,168,67,0.25);
+  border-color: var(--color-accent, #d4a843);
+  color: var(--color-accent, #d4a843);
+}
+
+.action-btn.danger {
+  border-color: rgba(192,57,43,0.4);
+}
+
+.action-btn.danger:hover {
+  background: rgba(192,57,43,0.25);
+  border-color: var(--color-danger, #c0392b);
+  box-shadow: 0 0 14px rgba(192,57,43,0.25);
+}
+
+/* ===== ENHANCED INITIATIVE BAR ===== */
+.initiative-bar {
+  background: linear-gradient(to bottom, rgba(5,5,10,0.95), rgba(5,5,10,0.7));
+  border-bottom: 1px solid rgba(212,168,67,0.1);
+  backdrop-filter: blur(6px);
+}
+
+.init-unit {
+  transition: all 0.2s;
+}
+
+.init-unit.active {
+  box-shadow: 0 0 10px rgba(212,168,67,0.4);
+  border-color: var(--color-accent, #d4a843) !important;
+  transform: scale(1.1);
+}
+
+/* ===== FLOATING DAMAGE NUMBERS ===== */
+@keyframes floatUp {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  50%  { opacity: 1; transform: translateY(-20px) scale(1.1); }
+  100% { opacity: 0; transform: translateY(-50px) scale(0.8); }
+}
+
+.damage-number {
+  position: absolute;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: var(--font-heading, Georgia, serif);
+  pointer-events: none;
+  animation: floatUp 1.2s ease forwards;
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+  z-index: 200;
+}
+
+.damage-number.miss { color: #aaa; font-size: 14px; }
+.damage-number.hit  { color: #ff6644; }
+.damage-number.crit { color: #ffdd22; font-size: 22px; }
+.damage-number.heal { color: #44dd66; }
+
+/* ===== ENHANCED MODALS ===== */
+.modal-content {
+  box-shadow:
+    0 0 0 1px rgba(212,168,67,0.1),
+    0 20px 60px rgba(0,0,0,0.8),
+    inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.event-modal {
+  max-width: 520px;
+}
+
+.event-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.event-choices .menu-btn {
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+  padding-left: 32px;
+}
+
+.event-choices .menu-btn::before {
+  content: '⚔';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+/* ===== ENHANCED PANELS ===== */
+.panel-header {
+  background: linear-gradient(to right, rgba(20,20,30,0.98), rgba(15,15,22,0.98));
+  border-bottom: 1px solid rgba(212,168,67,0.2);
+}
+
+.panel-header h3 {
+  font-family: var(--font-heading, Georgia, serif);
+  letter-spacing: 0.5px;
+}
+
+/* ===== ENHANCED CAMP ===== */
+.camp-section {
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.camp-section::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 100%;
+  background: linear-gradient(to bottom, var(--color-accent-dim, #8b6914), transparent);
+}
+
+.camp-section:hover {
+  border-color: rgba(212,168,67,0.3);
+}
+
+/* ===== ENHANCED INVENTORY ===== */
+.item-card {
+  transition: all 0.2s;
+  position: relative;
+}
+
+.item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* Rarity borders */
+.item-card.rarity-common   { border-color: rgba(150,150,150,0.4); }
+.item-card.rarity-uncommon { border-color: rgba(39,174,96,0.4); }
+.item-card.rarity-rare     { border-color: rgba(52,152,219,0.4); }
+.item-card.rarity-epic     { border-color: rgba(155,89,182,0.4); }
+.item-card.rarity-legendary { border-color: rgba(212,168,67,0.7);
+                               box-shadow: 0 0 8px rgba(212,168,67,0.2); }
+
+/* ===== BACKGROUND ITEM (CREATION) ===== */
+.background-item {
+  background: var(--color-surface2);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 10px;
+  font-size: 13px;
+  text-align: left;
+  border-radius: var(--radius);
+  min-height: 50px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.background-item:hover {
+  border-color: rgba(212,168,67,0.5);
+  color: var(--color-accent, #d4a843);
+  background: rgba(212,168,67,0.06);
+}
+
+.background-item.selected {
+  background: rgba(212,168,67,0.12);
+  border-color: var(--color-accent, #d4a843);
+  color: var(--color-accent, #d4a843);
+  box-shadow: 0 0 10px rgba(212,168,67,0.1);
+}
+
+.bg-name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.bg-wage {
+  font-size: 11px;
+  color: var(--color-text-dim);
+}
+
+/* ===== RECRUIT CARD ===== */
+.recruit-card {
+  transition: all 0.18s;
+}
+
+.recruit-card:hover {
+  border-color: rgba(212,168,67,0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+}
+
+.recruit-card .hire-btn {
+  transition: all 0.15s;
+}
+
+.recruit-card .hire-btn:hover {
+  background: rgba(212,168,67,0.2);
+  border-color: var(--color-accent, #d4a843);
+  color: var(--color-accent, #d4a843);
+}
+
+/* ===== MARKET ITEM ===== */
+.market-item {
+  transition: all 0.15s;
+}
+
+.market-item:hover {
+  border-color: rgba(212,168,67,0.3);
+  background: rgba(212,168,67,0.04);
+}
+
+/* ===== SKILL BARS ===== */
+.skill-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.skill-name {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.skill-bar {
+  flex: 1;
+  height: 5px;
+  background: rgba(255,255,255,0.07);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.skill-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-accent-dim, #8b6914), var(--color-accent, #d4a843));
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.skill-val {
+  font-size: 11px;
+  color: var(--color-accent, #d4a843);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ===== COMBAT LOG ENHANCEMENTS ===== */
+.combat-log {
+  backdrop-filter: blur(4px);
+  border-color: rgba(212,168,67,0.12);
+}
+
+.combat-log-entry {
+  border-left: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.combat-log-entry.attack  { border-left-color: var(--color-danger, #c0392b); }
+.combat-log-entry.miss    { border-left-color: rgba(150,150,150,0.4); color: var(--color-text-dim); }
+.combat-log-entry.crit    { border-left-color: #ffdd22; color: #ffdd22; }
+.combat-log-entry.death   { border-left-color: #8b0000; color: #ff4444; font-weight: bold; }
+.combat-log-entry.heal    { border-left-color: var(--color-success, #27ae60); color: #2ecc71; }
+.combat-log-entry.info    { border-left-color: var(--color-info, #2980b9); }
+
+/* ===== ROUND INFO ===== */
+#roundInfo {
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(212,168,67,0.2);
+  border-radius: var(--radius);
+  background: rgba(5,5,10,0.85);
+}
+
+/* ===== LOOT MODAL ===== */
+.loot-item {
+  padding: 8px 4px;
+  transition: background 0.15s;
+}
+
+.loot-item:hover {
+  background: rgba(212,168,67,0.05);
+}
+
+/* ===== ANIMATED PANEL REVEAL ===== */
+@keyframes panelSlideIn {
+  from { transform: translateX(30px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+.overlay.side-panel[style*="flex"] {
+  animation: panelSlideIn 0.2s ease;
+}

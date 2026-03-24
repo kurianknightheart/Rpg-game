@@ -19,6 +19,7 @@ import { initMenus } from './ui/menus.js';
 import HUD from './ui/hud.js';
 import { CombatUI } from './ui/combat-ui.js';
 import { SettlementUI } from './ui/settlement.js';
+import { MobileControls } from './ui/mobile-controls.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Canvas / context setup
@@ -55,9 +56,20 @@ const renderer     = new WorldRenderer();
 const settlementUI = new SettlementUI(document.getElementById('settlementPanel'));
 const combatUI     = new CombatUI(combatCanvas, document.getElementById('combatHUD'));
 
-// HUD is built dynamically via the HUD class but the HTML template provides
-// static HUD elements (overworldHUD) which we update directly.
-// We create a minimal HUD updater that targets the static HTML elements.
+// Mobile D-pad controls
+const mobileControls = new MobileControls(
+  document.getElementById('mobileDpadContainer'),
+  state,
+  moveParty
+);
+
+// Listen for D-pad zoom events
+document.getElementById('mobileDpadContainer').addEventListener('dpad:zoom', (e) => {
+  const factor = e.detail.dir > 0 ? 1.2 : 1 / 1.2;
+  worldCamera.zoom(factor);
+});
+
+// HUD updater targeting the static HTML elements from index.html
 const hud = {
   update() {
     const s = state;
@@ -78,8 +90,25 @@ const hud = {
 
     const aliveCount = s.roster.filter(c => c.alive).length;
     set('hudPartySize', `${aliveCount}/${s.maxRosterSize || 12}`);
+
+    // Update mini roster HP bars
+    _updateMiniRoster(s);
   }
 };
+
+function _updateMiniRoster(s) {
+  const container = el('miniRoster');
+  if (!container) return;
+  const alive = (s.roster || []).filter(c => c.alive);
+  container.innerHTML = alive.slice(0, 6).map(c => {
+    const pct = Math.round(Math.max(0, Math.min(100, (c.hp / (c.maxHP || 1)) * 100)));
+    const col = pct > 60 ? '#44cc66' : pct > 30 ? '#ddaa22' : '#cc3322';
+    return `<div class="mini-member" title="${c.name} ${c.hp}/${c.maxHP}HP">
+      <span class="mini-name">${c.name.split(' ')[0].substring(0,6)}</span>
+      <div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${pct}%;background:${col}"></div></div>
+    </div>`;
+  }).join('');
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -122,6 +151,7 @@ function enterOverworld() {
   showPanel('overworldHUD');
   state.setScreen('overworld');
   playMusic(SOUNDS.music_world);
+  mobileControls.show();
   hud.update();
 
   // Centre camera on party
@@ -139,6 +169,7 @@ function enterOverworld() {
 function enterSettlement(settlement) {
   state.setScreen('settlement');
   state.paused = true;
+  mobileControls.hide();
   hidePanel('overworldHUD');
   playSound(SOUNDS.world_enter_settlement);
   playMusic(SOUNDS.music_settlement);
@@ -156,6 +187,7 @@ function exitSettlement() {
 function enterCombat(enemyParty) {
   state.setScreen('combat');
   state.paused = true;
+  mobileControls.hide();
   hidePanel('overworldHUD');
   worldCanvas.style.display  = 'none';
   combatCanvas.style.display = 'block';
@@ -539,6 +571,26 @@ if (btnResume) {
   });
 }
 
+const btnDpad = el('btnDpad');
+if (btnDpad) {
+  btnDpad.addEventListener('click', () => {
+    mobileControls.toggle();
+    playSound(SOUNDS.ui_click);
+  });
+}
+
+// Add travel log entry helper (used throughout game)
+function addTravelLog(msg) {
+  const log = el('travelLog');
+  if (!log) return;
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  div.textContent = msg;
+  log.insertBefore(div, log.firstChild);
+  // Keep only last 8 entries
+  while (log.children.length > 8) log.removeChild(log.lastChild);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Keyboard shortcuts
 // ─────────────────────────────────────────────────────────────────────────────
@@ -580,6 +632,19 @@ document.addEventListener('keydown', (e) => {
       }
       break;
     }
+    // Arrow key movement (isometric directions)
+    case 'ArrowUp':    case 'w': case 'W':
+      e.preventDefault();
+      mobileControls._onDir(-1, -1); break;
+    case 'ArrowDown':  case 's': case 'S':
+      e.preventDefault();
+      mobileControls._onDir(1, 1); break;
+    case 'ArrowLeft':  case 'a': case 'A':
+      e.preventDefault();
+      mobileControls._onDir(-1, 1); break;
+    case 'ArrowRight': case 'd': case 'D':
+      e.preventDefault();
+      mobileControls._onDir(1, -1); break;
     case '+': case '=':
       worldCamera.zoom(1.15);
       break;
