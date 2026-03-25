@@ -3,7 +3,17 @@
    overrides and ensures it sits correctly on different screen sizes. */
 
 #mobileDpadContainer {
-  pointer-events: none; /* children handle their own events */
+  pointer-events: none; /* pass-through clicks to canvas underneath */
+}
+
+/* D-pad itself and all its buttons must explicitly enable pointer events */
+.mobile-dpad {
+  pointer-events: auto;
+}
+
+.dpad-btn,
+.dpad-zoom-btn {
+  pointer-events: auto;
 }
 
 /* On very small screens, scale the D-pad down a little */

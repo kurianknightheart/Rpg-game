@@ -398,7 +398,7 @@ function gameLoop(timestamp) {
       // ── Daily upkeep ──────────────────────────────────────────────────────
       if (state.day !== _lastDay) {
         _lastDay = state.day;
-        processDailyUpkeep(state.company);
+        processDailyUpkeep(state);
         updateContracts(state);
         autoSave();
         hud.update();

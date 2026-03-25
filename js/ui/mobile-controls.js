@@ -41,6 +41,7 @@ const DPAD_STYLES = `
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
+  pointer-events: auto;
 }
 
 .mobile-dpad.dpad-hidden {
@@ -71,6 +72,7 @@ const DPAD_STYLES = `
   transition: background 0.08s, transform 0.08s;
   -webkit-tap-highlight-color: transparent;
   outline: none;
+  pointer-events: auto;
 }
 
 .dpad-btn:active,
@@ -116,6 +118,7 @@ const DPAD_STYLES = `
   transition: background 0.08s;
   -webkit-tap-highlight-color: transparent;
   outline: none;
+  pointer-events: auto;
 }
 
 .dpad-zoom-btn:active {

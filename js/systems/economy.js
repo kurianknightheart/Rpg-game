@@ -119,22 +119,26 @@ function _doSell(company, settlement, stack, count, inventory) {
 }
 
 // Daily upkeep calculation
-export function calcDailyUpkeep(company) {
+// Accepts either the full game state (state.roster + state.company) or a legacy company object
+export function calcDailyUpkeep(stateOrCompany) {
+  const roster = stateOrCompany.roster || stateOrCompany.company?.roster || [];
   let wages = 0;
-  for (const char of company.roster) {
+  for (const char of roster) {
     if (!char.alive) continue;
     wages += char.wage || 3;
   }
 
   // Food consumption
-  const foodNeeded = company.roster.filter(c => c.alive).length;
+  const foodNeeded = roster.filter(c => c.alive).length;
 
   return { wages, foodNeeded };
 }
 
 // Pay wages and consume food
-export function processDailyUpkeep(company) {
-  const { wages, foodNeeded } = calcDailyUpkeep(company);
+// Accepts either the full game state (preferred) or a legacy company object
+export function processDailyUpkeep(stateOrCompany) {
+  const company = stateOrCompany.company || stateOrCompany;
+  const { wages, foodNeeded } = calcDailyUpkeep(stateOrCompany);
   const events = [];
 
   // Pay wages

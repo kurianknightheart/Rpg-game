@@ -541,8 +541,9 @@ export function getAvailableEvents(stateSnap) {
     const c = ev.conditions;
     if (c.minDay && stateSnap.day < c.minDay) return false;
     if (c.maxDay && stateSnap.day > c.maxDay) return false;
-    if (c.hasSkill && !stateSnap.company.roster.some(m => m.skills && m.skills[c.hasSkill] > 0)) return false;
-    if (c.hasTrait && !stateSnap.company.roster.some(m => m.traits && m.traits.includes(c.hasTrait))) return false;
+    const roster = stateSnap.roster || stateSnap.company?.roster || [];
+    if (c.hasSkill && !roster.some(m => m.skills && m.skills[c.hasSkill] > 0)) return false;
+    if (c.hasTrait && !roster.some(m => m.traits && m.traits.includes(c.hasTrait))) return false;
     return true;
   });
 }
